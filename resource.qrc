@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/icon"/>
+    <qresource prefix="/">
+        <file>icon/bluetooth.png</file>
+        <file>icon/chip.png</file>
+        <file>icon/serial.png</file>
+        <file>icon/USB.png</file>
+    </qresource>
+</RCC>
