@@ -13,7 +13,6 @@
 #pragma comment(lib,"legacy_stdio_definitions.lib")
 
 #define SEND_BUF_SIZE 256 // 发送数据缓冲区大小
-#define RECV_BUF_SIZE 256 // 接收数据缓冲区大小
 
 class USBThread : public QThread
 {

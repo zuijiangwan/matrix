@@ -5,7 +5,7 @@ USBThread::USBThread(){
     USBDevice = new CCyUSBDevice(); // 创建USB设备对象
     USBDevice->Close();
     usbReceive = new USBReceive(USBDevice); // 创建USB接收线程
-    connect(usbReceive, SIGNAL(dataReceived(QByteArray, int)), this, SIGNAL(dataReceived(QByteArray, int)));
+    connect(usbReceive, SIGNAL(dataReceived(QByteArray, int)), this, SLOT(dataReceived(QByteArray, int)));
     sendBuf = new unsigned char[SEND_BUF_SIZE];
     recvBuf = new unsigned char[RECV_BUF_SIZE];
 }
