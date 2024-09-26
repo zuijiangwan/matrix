@@ -2,9 +2,10 @@
 
 1. [项目简介](#项目简介)
 2. [文件架构](#文件架构)
+3. [环境配置](#环境配置)
 
 ## 项目简介
-这里是**江晚💖**的大学生研究计划项目。
+这里是[**江晚💖**](https://zuijiangwan.github.io)的大学生研究计划项目。
 
 压阻阵列型智能织物是一种获取表面压力分布的传感器，
 具有高分辨率、高灵敏度等特点，应用于人机交互、智慧医疗、智慧体育等领域。
@@ -27,11 +28,51 @@
 
 ## 文件架构
 ```
-├───doc             开发日志
-└───matrix          源代码文件夹
-    ├───form        .ui界面文件
-    ├───header      头文件
-    │   └───inc     CyAPI.h所需要的头文件
-    ├───icon        图标
-    └───source      源代码
+matrix
+│   matrix.pro                  
+│   README.md                   
+│   resource.qrc                
+├───form
+│       bluetoothdialog.ui
+│       mainwindow.ui
+│       serialdialog.ui
+│       usbdialog.ui
+├───header
+│   │   bluetoothdialog.h
+│   │   bluetooththread.h
+│   │   CyAPI.lib
+│   │   mainwindow.h
+│   │   package.h
+│   │   savefilethread.h
+│   │   serialdialog.h
+│   │   serialthread.h
+│   │   usbdialog.h
+│   │   usbreceive.h
+│   │   usbthread.h
+│   └───inc
+│           CyAPI.h
+│           cyioctl.h
+│           CyUSB30_def.h
+│           usb100.h
+│           usb200.h
+│           UsbdStatus.h
+│           VersionNo.h
+├───icon
+└───source
+        bluetoothdialog.cpp
+        bluetooththread.cpp
+        main.cpp
+        mainwindow.cpp
+        package.cpp
+        savefilethread.cpp
+        serialdialog.cpp
+        serialthread.cpp
+        usbdialog.cpp
+        usbreceive.cpp
+        usbthread.cpp
 ```
+
+## 环境配置
+### Qt
+### MSVC
+### CyAPI
