@@ -13,6 +13,9 @@ class USBDialog: public QDialog, public Ui::USBDialog
 public:
     USBDialog(CCyUSBDevice *USBDevice, CCyUSBEndPoint *outEndPoint, CCyUSBEndPoint *inEndPoint); // 构造函数
 
+signals:
+    void connected(); // 成功连接USB设备
+
 private:
     CCyUSBDevice *USBDevice; // USB设备，用来连接USB
     CCyUSBEndPoint *outEndPoint; // USB设备输出端点

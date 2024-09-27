@@ -1,7 +1,6 @@
-#ifndef USBTHREAD_H
-#define USBTHREAD_H
+#ifndef USBMODULE_H
+#define USBMODULE_H
 
-#include <QThread>
 #include <windows.h>
 #include "CyAPI.h"
 #include "usbdialog.h"
@@ -14,14 +13,13 @@
 
 #define SEND_BUF_SIZE 256 // 发送数据缓冲区大小
 
-class USBThread : public QThread
+class USBModule : public QObject
 {
     Q_OBJECT
 
 private:
     USBDialog *usbDialog;
     USBReceive *usbReceive;
-    volatile bool stopped;
     
     CCyUSBDevice *USBDevice;	//USB设备
 	CCyUSBEndPoint *outEndPoint; //USB设备输出端点
@@ -36,9 +34,12 @@ public:
     unsigned char *sendBuf; // 发送数据缓冲区
     unsigned char *recvBuf; // 接收数据缓冲区
 
-    USBThread();
+    USBModule();
     bool isConnected();
     bool sendData(QByteArray data);
+
+public slots:
+    void receiveData();
 };
 
-#endif // USBTHREAD_H
+#endif // USBMODULE_H

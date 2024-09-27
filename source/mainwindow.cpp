@@ -1,7 +1,7 @@
 #include "../header/mainwindow.h"
-#include "../header/serialthread.h"
-#include "../header/bluetooththread.h"
-#include "../header/usbthread.h"
+#include "../header/serialmodule.h"
+#include "../header/bluetoothmodule.h"
+#include "../header/usbmodule.h"
 #include "../header/savefilethread.h"
 #include <QMessageBox>
 
@@ -12,14 +12,14 @@ MainWindow::MainWindow() : QMainWindow(){
     connect(SendButton, SIGNAL(clicked()), this, SLOT(sendData()));
 
     // 串口线程
-    serialThread = new SerialThread();
-    connect(connectSerialAct, SIGNAL(triggered()), serialThread, SLOT(connectSerial()));
+    serialModule = new SerialModule();
+    connect(connectSerialAct, SIGNAL(triggered()), serialModule, SLOT(connectSerial()));
     // 蓝牙线程
-    blueToothThread = new BlueToothThread();
-    connect(connectBlueToothAct, SIGNAL(triggered()), blueToothThread, SLOT(connectBlueTooth()));
+    blueToothModule = new BlueToothModule();
+    connect(connectBlueToothAct, SIGNAL(triggered()), blueToothModule, SLOT(connectBlueTooth()));
     // USB线程
-    usbThread = new USBThread();
-    connect(connectUSBAct, SIGNAL(triggered()), usbThread, SLOT(connectUSB()));
+    usbModule = new USBModule();
+    connect(connectUSBAct, SIGNAL(triggered()), usbModule, SLOT(connectUSB()));
 
     // 保存文件线程
     // saveFileThread = new SaveFileThread();
@@ -41,7 +41,7 @@ void MainWindow::sendData(){
 
     // 三个线程都尝试发送数据，只要有一个发送成功，即视为发送成功
     // 若发送了数据，则清空输入框并显示发送的数据
-    if(serialThread->send(data) || blueToothThread->sendMsg(data) || usbThread->sendData(data)){
+    if(serialModule->send(data) || blueToothModule->sendMsg(data) || usbModule->sendData(data)){
         MessageBrowser->append("发送：" + MessageEdit->toPlainText());
         MessageEdit->clear();
     }

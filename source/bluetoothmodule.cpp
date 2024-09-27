@@ -1,11 +1,7 @@
 #include <QMessageBox>
-#include "../header/bluetooththread.h"
+#include "../header/bluetoothmodule.h"
 
-void BlueToothThread::run(){
-    stopped = false;
-}
-
-BlueToothThread::BlueToothThread(){
+BlueToothModule::BlueToothModule(){
     // 创建本地设备对象
     localDevice = new QBluetoothLocalDevice(this);
     if(localDevice->hostMode() == QBluetoothLocalDevice::HostPoweredOff) // 打开本地蓝牙
@@ -16,10 +12,9 @@ BlueToothThread::BlueToothThread(){
     connect(socket, SIGNAL(readyRead()), this, SLOT(readMsg())); // 读取数据
 
     blueToothDialog = 0;
-    stopped = false;
 }
 
-void BlueToothThread::connectBlueTooth(){
+void BlueToothModule::connectBlueTooth(){
     if(!blueToothDialog){
         blueToothDialog = new BlueToothDialog(socket);
     }
@@ -29,18 +24,18 @@ void BlueToothThread::connectBlueTooth(){
 }
 
 // 读取数据
-void BlueToothThread::readMsg(){
+void BlueToothModule::readMsg(){
     QByteArray data = socket->readAll(); // 读取所有数据
     qDebug() << data;
 }
 
 // 判断是否连接
-bool BlueToothThread::isConnected(){
+bool BlueToothModule::isConnected(){
     return socket->isOpen();
 }
 
 // 发送数据
-bool BlueToothThread::sendMsg(QByteArray data){
+bool BlueToothModule::sendMsg(QByteArray data){
     if(!socket->isOpen()){
         return false;
     }

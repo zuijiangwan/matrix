@@ -31,8 +31,11 @@ void USBDialog::connectUSBDevice(){ // 连接USB设备
     }
 
     // 检查是否连接成功
-    if(USBDevice->Open(PortList->currentRow()))
+    if(USBDevice->Open(PortList->currentRow())){
         QMessageBox::information(this, tr("information"), tr("连接成功！"));
+        USBDevice->BulkInEndPt->TimeOut = 0; // 超时时间设为0
+        emit connected(); // 发送信号，开始接收数据
+    }
     else
         QMessageBox::critical(this, tr("error"), tr("连接失败！"));
 

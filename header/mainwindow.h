@@ -3,9 +3,9 @@
 
 #include <QMainWindow>
 #include "ui_mainwindow.h"
-#include "serialthread.h"
-#include "bluetooththread.h"
-#include "usbthread.h"
+#include "serialmodule.h"
+#include "bluetoothmodule.h"
+#include "usbmodule.h"
 #include "savefilethread.h"
 
 class MainWindow : public QMainWindow, public Ui::MainWindow{
@@ -19,10 +19,10 @@ private:
 
     unsigned int packageNum; // 命令帧包号
 
-    // 线程
-    SerialThread *serialThread;
-    BlueToothThread *blueToothThread;
-    USBThread *usbThread;
+    // 模块和线程
+    SerialModule *serialModule;
+    BlueToothModule *blueToothModule;
+    USBModule *usbModule;
     SaveFileThread *saveFileThread;
 
     int check(QByteArray message); // 校验字算法
