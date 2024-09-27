@@ -1,15 +1,20 @@
 #include "../header/usbreceive.h"
+#include <QDebug>
 
 USBReceive::USBReceive(CCyUSBDevice *USBDevice) : USBDevice(USBDevice){
     stopped = false;
 }
 
-void USBReceive::receiveData(){
-    bool flag = false;
-    LONG length = RECV_BUF_SIZE;
+void USBReceive::run(){
+    LONG length;
     while(!stopped){
-        flag = USBDevice->BulkInEndPt->XferData(recvBuf, length);
-        if(flag) // 若成功接收数据，则发送信号
-            emit dataReceived(QByteArray((char *)recvBuf), length);
+        length = RECV_BUF_SIZE;
+        if(USBDevice->BulkInEndPt->XferData(recvBuf, length)){
+            qDebug() << "接收内容";
+            for(int i = 0; i < length; i++)
+                qDebug() << recvBuf[i];
+            emit readReady();
+        }
     }
+    stopped = false;
 }

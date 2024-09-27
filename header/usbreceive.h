@@ -11,17 +11,18 @@ class USBReceive : public QThread{
     Q_OBJECT
 
 private:
-    volatile bool stopped;
+    volatile bool stopped; // 控制线程是否中止
     CCyUSBDevice *USBDevice;
     unsigned char recvBuf[RECV_BUF_SIZE];
 
-    void receiveData();
+protected:
+    void run();
 
 public:
-    USBReceive(CCyUSBDevice *USBDevice);
+    USBReceive(CCyUSBDevice *USBDevice); // 构造函数
 
 signals:
-    void dataReceived(QByteArray data, int length);
+    void readReady();
 };
 
 #endif // USBRECEIVE_H
