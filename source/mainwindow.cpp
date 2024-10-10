@@ -1,6 +1,10 @@
 #include "../header/mainwindow.h"
 #include <QMessageBox>
-
+#include <QDialog>
+#include <QInputDialog>
+#include <QFormLayout>
+#include <QSpinBox>
+#include <QDialogButtonBox>
 
 MainWindow::MainWindow() : QMainWindow(){
     setupUi(this);
@@ -84,22 +88,65 @@ void MainWindow::sendCommand(int commandCode, QByteArray info){ // 把相应命�
 
     // 转成String，每一个字节间插一个空格
     QString message;
-    for(unsigned int i : data){
-        i &= 0xff; // 只保留低8位
-        if(i < 16)
+    for(int i=0; i < data.size(); i++){
+        unsigned int datum = data[i] & 0xff; // 只保留低8位
+        if(datum < 16)
             message.append("0");
-        message.append(QString::number(i, 16));
+        message.append(QString::number(datum, 16));
         message.append(" ");
     }
     MessageEdit->setText(message);
     return;
 }
 
-int MainWindow::check(QByteArray message){
+int MainWindow::check(QByteArray message){ // 校验字算法
     // 算法内容现在是乱写的简单版checksum
     int check = 0;
     for(auto i : message){
         check += i;
     }
     return check;
-}   
+}
+
+void MainWindow::setRate(){ // 设置传输速率
+    int rate = QInputDialog::getInt(this, tr("设置传输速率"), tr("请输入传输速率：(Hz)"));
+    QByteArray info; // 2字节速率
+    info.append(rate >> 8);
+    info.append(rate);
+    sendCommand(0x17, info);
+    return;
+}
+
+void MainWindow::setThreshold(){ // 设置阈值;
+    int threshold = QInputDialog::getInt(this, tr("设置阈值"), tr("请输入阈值："));
+    QByteArray info; // 2字节阈值
+    info.append(threshold >> 8);
+    info.append(threshold);
+    sendCommand(0x18, info);
+    return;
+}
+
+void MainWindow::setSize(){ // 设置矩阵规模
+    // 编写一个简单输入对话框
+    QDialog dialog(this);
+    QFormLayout form(&dialog);
+    form.addRow(new QLabel(tr("输入矩阵规模：")));
+    QString value1 = QString("长：");
+    QSpinBox *spinbox1 = new QSpinBox(&dialog);
+    form.addRow(value1, spinbox1);
+    QString value2 = QString("宽：");
+    QSpinBox *spinbox2 = new QSpinBox(&dialog);
+    form.addRow(value2, spinbox2);
+    QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+    if (dialog.exec() == QDialog::Accepted){ // 当确认键按下
+        QByteArray info; // 2字节矩阵规模，分别是长和宽
+        info.append(spinbox1->value());
+        info.append(spinbox2->value());
+        sendCommand(0x19, info);
+    }
+    return;
+}

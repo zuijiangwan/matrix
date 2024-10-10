@@ -52,9 +52,9 @@ private slots:
     void stopAll(){sendCommand(0x15);} // 停止所有传输任务;
 
     void getVoltage(){sendCommand(0x16);} // 获取电池电压;
-    void setRate(){sendCommand(0x17);} // 设置传输速率;
-    void setThreshold(){sendCommand(0x18);} // 设置阈值;
-    void setSize(){sendCommand(0x19);} // 设置数据大小;
+    void setRate(); // 设置传输速率;
+    void setThreshold(); // 设置阈值;
+    void setSize(); // 设置矩阵规模;
     void turnOn(){sendCommand(0x1a);} // 开灯;
     void turnOff(){sendCommand(0x1b);} // 关灯;
 
