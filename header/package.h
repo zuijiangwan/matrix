@@ -32,7 +32,7 @@ class CommandPackage : public Package{
     
     public:
         CommandPackage(QByteArray originContent); // 构造函数
-        CommandPackage(int packageNum, int commandCode, QByteArray info = NULL); // 构造函数，需要的信息为：指令码，额外信息
+        CommandPackage(int packageNum, int commandCode, QByteArray info = NULL); // 构造函数，需要的信息为：指令码，额外信息（默认为空）
 };
 
 class DataPackage : public Package{

@@ -7,7 +7,7 @@ USBModule::USBModule(){
     USBDevice->Close(); // 需要先关闭，否则状态会有误
 
     usbReceive = new USBReceive(USBDevice); // 创建USB接收线程
-    connect(usbReceive, SIGNAL(dataReceived(QByteArray,int)), this, SLOT(dataReceived(QByteArray,int)));
+    //connect(usbReceive, SIGNAL(dataReceived(QByteArray,int)), this, SLOT(dataReceived(QByteArray,int)));
 
     sendBuf = new unsigned char[SEND_BUF_SIZE];
     recvBuf = new unsigned char[RECV_BUF_SIZE];

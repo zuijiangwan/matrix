@@ -401,25 +401,25 @@
      <property name="title">
       <string>USB3.0</string>
      </property>
-     <addaction name="action_11"/>
-     <addaction name="action_15"/>
+     <addaction name="beginUSBAct"/>
+     <addaction name="stopUSBAct"/>
     </widget>
     <widget class="QMenu" name="menu_6">
      <property name="title">
       <string>蓝牙</string>
      </property>
-     <addaction name="action_12"/>
-     <addaction name="action_17"/>
+     <addaction name="beginBltAct"/>
+     <addaction name="stopBltAct"/>
     </widget>
     <widget class="QMenu" name="menuSD">
      <property name="title">
       <string>SD卡</string>
      </property>
-     <addaction name="action_13"/>
-     <addaction name="action_16"/>
-     <addaction name="action_18"/>
-     <addaction name="action_19"/>
-     <addaction name="action_20"/>
+     <addaction name="beginSDAct"/>
+     <addaction name="stopSDAct"/>
+     <addaction name="newCardAct"/>
+     <addaction name="initCardAct"/>
+     <addaction name="getConfigAct"/>
     </widget>
     <addaction name="stopAct"/>
     <addaction name="menu_5"/>
@@ -437,11 +437,12 @@
     <property name="title">
      <string>工具</string>
     </property>
-    <addaction name="action_21"/>
-    <addaction name="action_22"/>
-    <addaction name="action_23"/>
-    <addaction name="action_24"/>
-    <addaction name="action_25"/>
+    <addaction name="setRateAct"/>
+    <addaction name="setThresholdAct"/>
+    <addaction name="turnOnAct"/>
+    <addaction name="turnOffAct"/>
+    <addaction name="setSizeAct"/>
+    <addaction name="getVoltageAct"/>
    </widget>
    <widget class="QMenu" name="menu_7">
     <property name="title">
@@ -480,17 +481,17 @@
     <string>开始</string>
    </property>
   </action>
-  <action name="action_11">
+  <action name="beginUSBAct">
    <property name="text">
     <string>开始</string>
    </property>
   </action>
-  <action name="action_12">
+  <action name="beginBltAct">
    <property name="text">
     <string>开始</string>
    </property>
   </action>
-  <action name="action_13">
+  <action name="beginSDAct">
    <property name="text">
     <string>开始</string>
    </property>
@@ -500,57 +501,57 @@
     <string>结束</string>
    </property>
   </action>
-  <action name="action_15">
+  <action name="stopUSBAct">
    <property name="text">
     <string>结束</string>
    </property>
   </action>
-  <action name="action_16">
+  <action name="stopSDAct">
    <property name="text">
     <string>结束</string>
    </property>
   </action>
-  <action name="action_17">
+  <action name="stopBltAct">
    <property name="text">
     <string>结束</string>
    </property>
   </action>
-  <action name="action_18">
+  <action name="newCardAct">
    <property name="text">
     <string>新卡</string>
    </property>
   </action>
-  <action name="action_19">
+  <action name="initCardAct">
    <property name="text">
     <string>初始</string>
    </property>
   </action>
-  <action name="action_20">
+  <action name="getConfigAct">
    <property name="text">
     <string>获取配置</string>
    </property>
   </action>
-  <action name="action_21">
+  <action name="setRateAct">
    <property name="text">
     <string>速率</string>
    </property>
   </action>
-  <action name="action_22">
+  <action name="setThresholdAct">
    <property name="text">
     <string>阈值</string>
    </property>
   </action>
-  <action name="action_23">
+  <action name="turnOffAct">
    <property name="text">
     <string>关灯</string>
    </property>
   </action>
-  <action name="action_24">
+  <action name="turnOnAct">
    <property name="text">
     <string>开灯</string>
    </property>
   </action>
-  <action name="action_25">
+  <action name="setSizeAct">
    <property name="text">
     <string>矩阵规模</string>
    </property>
@@ -573,6 +574,11 @@
   <action name="savePositonAct">
    <property name="text">
     <string>保存位置</string>
+   </property>
+  </action>
+  <action name="getVoltageAct">
+   <property name="text">
+    <string>获取电池电压</string>
    </property>
   </action>
  </widget>
