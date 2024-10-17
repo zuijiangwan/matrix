@@ -9,17 +9,26 @@
 #include "savefilethread.h"
 #include "package.h"
 
+
 class MainWindow : public QMainWindow, public Ui::MainWindow{
     Q_OBJECT
 
 public:
     MainWindow();
+    char recvdata[256]; // 接收数据缓冲区
+    char *recvpos; // 接收数据缓冲区开始位置
+    QReadWriteLock buflock; // 读写锁
 
 private:
     Ui::MainWindow *ui;
 
-    unsigned char packageNum; // 命令帧包号，1个字节
     char commandHead[8] = {COMMANDHEAD}; // 命令帧包头
+    int bufdatalen; // 接收缓存中有效数据的长度
+
+    int allPackageNum; // 总帧数
+    int sentPackageNum; // 已发送
+    int recPackageNum; // 已接收
+    int dropPackageNum; // 已丢弃
 
     // 模块和线程
     SerialModule *serialModule; // 串口
@@ -32,6 +41,8 @@ private:
 
 private slots:
     void sendData(); // 发送数据
+    void receiveData(); // 接收数据
+    void checkPackage(int datalen); // 检查包，输入为新收到的数据的长度
 
     // 菜单栏相关
     void beginSD(){sendCommand(0x00);} // 开始SD卡传输;

@@ -5,16 +5,30 @@
 #include <QFormLayout>
 #include <QSpinBox>
 #include <QDialogButtonBox>
+#include <QLabel>
+#include <QCheckBox>
 
 MainWindow::MainWindow() : QMainWindow(){
     setupUi(this);
 
-    packageNum = 0; // 初始化包号
+    // 初始化各种包的统计值
+    allPackageNum = 0;
+    sentPackageNum = 0;
+    recPackageNum = 0;
+    dropPackageNum = 0;
+    allPackageLabel->setText(QString::number(allPackageNum));
+    sentPackageLabel->setText(QString::number(sentPackageNum));
+    recPackageLabel->setText(QString::number(recPackageNum));
+    dropPackageLabel->setText(QString::number(dropPackageNum));
+
+    recvpos = recvdata; // 初始化接收数据缓冲区开始位置
+
     connect(SendButton, SIGNAL(clicked()), this, SLOT(sendData())); // 发送按钮
 
     // 串口线程
-    serialModule = new SerialModule();
+    serialModule = new SerialModule(&buflock, recvpos);
     connect(connectSerialAct, SIGNAL(triggered()), serialModule, SLOT(connectSerial()));
+    connect(serialModule, SIGNAL(dataReceived(int)), this, SLOT(checkPackage(int)));
     // 蓝牙线程
     blueToothModule = new BlueToothModule();
     connect(connectBlueToothAct, SIGNAL(triggered()), blueToothModule, SLOT(connectBlueTooth()));
@@ -58,13 +72,22 @@ void MainWindow::sendData(){
         QMessageBox::warning(this, tr("warning"), tr("发送内容为空！"));
         return;
     }
-    QByteArray data = QByteArray::fromHex(MessageEdit->toPlainText().toLatin1()); // 待发送数据
+    
+    QByteArray data; // 待发送数据
+    if(HexCheckBox->isChecked()) // 若勾选了16进制发送
+        data = QByteArray::fromHex(MessageEdit->toPlainText().toLatin1());
+    else
+        data = MessageEdit->toPlainText().toLatin1();
+
     // 三个线程都尝试发送数据，只要有一个发送成功，即视为发送成功
     if(serialModule->send(data) || blueToothModule->sendMsg(data) || usbModule->sendData(data)){ 
         // 若发送了数据，则清空输入框并显示发送的数据，包号自增
         MessageBrowser->append("发送：" + MessageEdit->toPlainText());
         MessageEdit->clear();
-        packageNum++;
+        allPackageNum++;
+        sentPackageNum++;
+        allPackageLabel->setText(QString::number(allPackageNum));
+        sentPackageLabel->setText(QString::number(sentPackageNum));
     }
     else{ 
         // 否则，弹出提示框
@@ -73,11 +96,12 @@ void MainWindow::sendData(){
     return;
 }
 
+
 void MainWindow::sendCommand(int commandCode, QByteArray info){ // 把相应命令帧填入发送框
     QByteArray data; // 待发送命令
     for(int i = 0; i < 8; i++) // 8字节包头
         data.append(commandHead[i]);
-    data.append(packageNum);// 1字节包号
+    data.append(sentPackageNum);// 1字节包号
     data.append(commandCode >> 8); // 2字节指令码
     data.append(commandCode & 0xff);
     data.append(info.size() >> 8); // 2字节额外信息长度
@@ -97,6 +121,18 @@ void MainWindow::sendCommand(int commandCode, QByteArray info){ // 把相应命�
     }
     MessageEdit->setText(message);
     return;
+}
+
+void MainWindow::checkPackage(int datalen){ // 检查收到的数据内是否出现包头
+    int endPos = bufdatalen + datalen; // 有效数据末尾位置
+    if(endPos >= RECV_BUF_SIZE){ // 若缓冲区溢出
+        bufdatalen = 0;
+        recvpos = recvdata;        
+    }
+    // 先检查是否出现完整的数据帧或返回帧包头
+    // 再检查结尾处是否出现前半个包头
+
+
 }
 
 int MainWindow::check(QByteArray message){ // 校验字算法
