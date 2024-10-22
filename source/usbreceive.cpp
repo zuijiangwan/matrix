@@ -8,12 +8,9 @@ USBReceive::USBReceive(CCyUSBDevice *USBDevice) : USBDevice(USBDevice){
 void USBReceive::run(){
     LONG length;
     while(!stopped){
-        length = RECV_BUF_SIZE;
-        if(USBDevice->BulkInEndPt->XferData(recvBuf, length)){
-            qDebug() << "接收内容";
-            for(int i = 0; i < length; i++)
-                qDebug() << recvBuf[i];
-            emit readReady();
+        length = RECVBUFSIZE;
+        if(USBDevice->BulkInEndPt->XferData((unsigned char *)recvbuf + RECVSIZE, length)){
+            emit dataReceived(length);
         }
     }
     stopped = false;

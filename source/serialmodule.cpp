@@ -3,7 +3,7 @@
 #include <QString>
 #include "../header/serialmodule.h"
 
-SerialModule::SerialModule(QReadWriteLock *buflock, char *recvdata): buflock(buflock), recvdata(recvdata){
+SerialModule::SerialModule(){
     serialDialog = 0;
     port = new QSerialPort();  
     connect(port, SIGNAL(readyRead()), this, SLOT(receive()));
@@ -27,15 +27,13 @@ bool SerialModule::send(QByteArray data){
 }
 
 void SerialModule::receive(){
-    if(buflock->tryLockForWrite()){
+    if(recvlock.tryLockForWrite()){
         QByteArray data = port->readAll();
-        memcpy(recvdata, data.data(), data.size());
-        buflock->unlock();
+        memcpy(recvbuf + RECVSIZE, data.data(), data.size());
+        recvlock.unlock();
         emit dataReceived(data.size());
-        return;
     }
-    else
-        return;
+    return;
 }
 
 bool SerialModule::isConnected(){

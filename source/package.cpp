@@ -15,31 +15,11 @@ Package::Package(QByteArray originContent) : content(originContent){
         type = OTHER;
 }
 
-Package::Package() : content(NULL){
-    type = COMMAND; // 上位机主动构造的包只会是命令帧
-}
-
 CommandPackage::CommandPackage(QByteArray originContent) : Package::Package(originContent){
     packageNum = originContent[8]; // 包号
     commandCode = originContent[9] << 8 | originContent[10]; // 指令码
     informationLenth = originContent[11] << 8 | originContent[12]; // 额外信息长度
     information = originContent.mid(13, informationLenth); // 额外信息
-}
-
-CommandPackage::CommandPackage(int packageNum, int commandCode, QByteArray info)
- : Package::Package(), packageNum(packageNum), commandCode(commandCode){
-    if(info.isNull()){ // 额外信息为空
-        informationLenth = 0;
-    }
-    else{ // 有额外信息
-        informationLenth = info.size();
-        information = info;
-    }
-    fillContent(); // 填充包内容
-}
-
-void CommandPackage::fillContent(){
-    // content.clear(); // 清空原内容
 }
 
 DataPackage::DataPackage(QByteArray originContent) : Package::Package(originContent){

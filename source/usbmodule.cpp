@@ -8,9 +8,6 @@ USBModule::USBModule(){
 
     usbReceive = new USBReceive(USBDevice); // 创建USB接收线程
     //connect(usbReceive, SIGNAL(dataReceived(QByteArray,int)), this, SLOT(dataReceived(QByteArray,int)));
-
-    sendBuf = new unsigned char[SEND_BUF_SIZE];
-    recvBuf = new unsigned char[RECV_BUF_SIZE];
 }
 
 void USBModule::connectUSB(){
@@ -28,9 +25,8 @@ bool USBModule::sendData(QByteArray data){
     if(!USBDevice->IsOpen())
         return false;
     
-    memcpy(sendBuf, data.data(), data.size());
     LONG bytesToSend = data.size();
-    return USBDevice->BulkOutEndPt->XferData(sendBuf, bytesToSend);
+    return USBDevice->BulkOutEndPt->XferData((unsigned char *)data.data(), bytesToSend);
 }
 
 bool USBModule::isConnected(){

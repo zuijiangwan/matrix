@@ -3,32 +3,21 @@
 
 #include <QMainWindow>
 #include "ui_mainwindow.h"
+#include "define.h"
 #include "serialmodule.h"
 #include "bluetoothmodule.h"
 #include "usbmodule.h"
 #include "savefilethread.h"
 #include "package.h"
 
-
 class MainWindow : public QMainWindow, public Ui::MainWindow{
     Q_OBJECT
 
 public:
     MainWindow();
-    char recvdata[256]; // 接收数据缓冲区
-    char *recvpos; // 接收数据缓冲区开始位置
-    QReadWriteLock buflock; // 读写锁
 
 private:
     Ui::MainWindow *ui;
-
-    char commandHead[8] = {COMMANDHEAD}; // 命令帧包头
-    int bufdatalen; // 接收缓存中有效数据的长度
-
-    int allPackageNum; // 总帧数
-    int sentPackageNum; // 已发送
-    int recPackageNum; // 已接收
-    int dropPackageNum; // 已丢弃
 
     // 模块和线程
     SerialModule *serialModule; // 串口
@@ -36,13 +25,18 @@ private:
     USBModule *usbModule; // USB
     SaveFileThread *saveFileThread;
 
+    // 工具函数
     void sendCommand(int commandCode, QByteArray info = ""); // 将命令填入发送框内，参数为指令码和额外信息，额外信息默认为空
     int check(QByteArray message); // 校验字算法
+
+signals:
+    void packReceived(); // 已将完整的包存入包buffer
 
 private slots:
     void sendData(); // 发送数据
     void receiveData(); // 接收数据
-    void checkPackage(int datalen); // 检查包，输入为新收到的数据的长度
+    void checkHead(int datalen); // 检查包，输入为新收到的数据的长度
+    void checkPackage(); // 检查包buffer的内容，构造新的包
 
     // 菜单栏相关
     void beginSD(){sendCommand(0x00);} // 开始SD卡传输;
@@ -68,7 +62,6 @@ private slots:
     void setSize(); // 设置矩阵规模;
     void turnOn(){sendCommand(0x1a);} // 开灯;
     void turnOff(){sendCommand(0x1b);} // 关灯;
-
 };
 
 #endif

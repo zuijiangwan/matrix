@@ -6,6 +6,9 @@
 #include <QTextBrowser>
 #include <QReadWriteLock>
 #include "serialdialog.h"
+#include "define.h"
+
+extern QReadWriteLock recvlock; // 读写锁
 
 class SerialModule : public QObject{
     Q_OBJECT
@@ -13,8 +16,6 @@ class SerialModule : public QObject{
 private:
     SerialDialog *serialDialog;
     QSerialPort *port;
-    QReadWriteLock *buflock;
-    char *recvdata;
 
 signals:
     int dataReceived(int datalen); // 已将输入数据存入读取buffer，返回值为收到的数据的长度
@@ -26,7 +27,7 @@ public slots:
     void connectSerial();
 
 public:
-    SerialModule(QReadWriteLock *buflock, char *recvdata);
+    SerialModule();
     bool isConnected();
     bool send(QByteArray data);
 };

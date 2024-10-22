@@ -11,24 +11,19 @@
 MainWindow::MainWindow() : QMainWindow(){
     setupUi(this);
 
-    // 初始化各种包的统计值
-    allPackageNum = 0;
-    sentPackageNum = 0;
-    recPackageNum = 0;
-    dropPackageNum = 0;
+    // 各种包的统计值
     allPackageLabel->setText(QString::number(allPackageNum));
     sentPackageLabel->setText(QString::number(sentPackageNum));
     recPackageLabel->setText(QString::number(recPackageNum));
     dropPackageLabel->setText(QString::number(dropPackageNum));
 
-    recvpos = recvdata; // 初始化接收数据缓冲区开始位置
-
     connect(SendButton, SIGNAL(clicked()), this, SLOT(sendData())); // 发送按钮
+    connect(this, SIGNAL(packReceived()), this, SLOT(checkPackage())); // 检查包buffer的内容，构造新的包
 
     // 串口线程
-    serialModule = new SerialModule(&buflock, recvpos);
+    serialModule = new SerialModule();
     connect(connectSerialAct, SIGNAL(triggered()), serialModule, SLOT(connectSerial()));
-    connect(serialModule, SIGNAL(dataReceived(int)), this, SLOT(checkPackage(int)));
+    connect(serialModule, SIGNAL(dataReceived(int)), this, SLOT(checkHead(int)));
     // 蓝牙线程
     blueToothModule = new BlueToothModule();
     connect(connectBlueToothAct, SIGNAL(triggered()), blueToothModule, SLOT(connectBlueTooth()));
@@ -96,7 +91,6 @@ void MainWindow::sendData(){
     return;
 }
 
-
 void MainWindow::sendCommand(int commandCode, QByteArray info){ // 把相应命令帧填入发送框
     QByteArray data; // 待发送命令
     for(int i = 0; i < 8; i++) // 8字节包头
@@ -123,16 +117,88 @@ void MainWindow::sendCommand(int commandCode, QByteArray info){ // 把相应命�
     return;
 }
 
-void MainWindow::checkPackage(int datalen){ // 检查收到的数据内是否出现包头
-    int endPos = bufdatalen + datalen; // 有效数据末尾位置
-    if(endPos >= RECV_BUF_SIZE){ // 若缓冲区溢出
-        bufdatalen = 0;
-        recvpos = recvdata;        
+void MainWindow::checkHead(int inputdatalen){ // 检查收到的数据内是否出现包头
+    recvlock.lockForWrite(); // 上锁，退出函数前记得解锁
+
+    static int datawait = 0; // 待接收数据长度
+    static int packdatalen = 0; // 包buffer中有效数据长度
+    int endpos = min(recvsize + inputdatalen, RECVBUFSIZE); // 有效数据末尾位置
+    int beginpos = datawait > 0 ? 0 : recvsize; // 有效数据起始位置
+
+    // 检查上一次是否有剩余的数据
+    if(datawait > 0){ // 需要接收的数据总长已经确定
+        int datalen = endpos - beginpos;
+        if(datalen >= datawait){ // 若剩余数据已经接收完
+            packlock.lockForWrite();
+            memcpy(packbuf + packdatalen, recvbuf + beginpos, datawait);
+            packlock.unlock();
+            packdatalen = 0;
+            beginpos += datawait;
+            datawait = 0;
+            emit packReceived();
+        }
+        else{ // 若剩余数据未接收完
+            packlock.lockForWrite();
+            memcpy(packbuf + packdatalen, recvbuf + beginpos, datalen);
+            packlock.unlock();
+            packdatalen += datalen;
+            datawait -= datalen;
+            recvlock.unlock();
+            return;
+        }
     }
-    // 先检查是否出现完整的数据帧或返回帧包头
-    // 再检查结尾处是否出现前半个包头
+    // 检查是否出现数据帧或返回帧包头
+    while(endpos - beginpos + 1 > recvsize){ // 只检查带有包总长的完整包头
+        if(memcmp(recvbuf + beginpos, dataHead, headsize) == 0 || memcmp(recvbuf + beginpos, returnHead, headsize) == 0){
+            int packlen = recvbuf[beginpos + headsize] << 8 | recvbuf[beginpos + headsize + 1]; // 包总长
+            if(endpos - beginpos + 1 >= packlen){ // 若包已经接收完
+                packlock.lockForWrite();
+                memcpy(packbuf + packdatalen, recvbuf + beginpos, packlen);
+                packlock.unlock();
+                packdatalen = 0;
+                beginpos += packlen;
+                emit packReceived();
+            }
+            else{ // 若包未接收完
+                packlock.lockForWrite();
+                memcpy(packbuf + packdatalen, recvbuf + beginpos, endpos - beginpos + 1);
+                packlock.unlock();
+                packdatalen = endpos - beginpos + 1;
+                datawait = packlen - (endpos - beginpos  + 1);
+                recvlock.unlock();
+                return;
+            }
+        }
+        beginpos++;
+    }
+    // 将buffer的最后几位移到最前面
+    memcpy(recvbuf, recvbuf + endpos - recvsize + 1, recvsize);
+    recvlock.unlock();
+    return;
+}
 
-
+// 检查包的校验码是否正确
+void MainWindow::checkPackage(){
+    packlock.lockForRead(); // 上锁
+    allPackageNum++; // 总包数增加
+    allPackageLabel->setText(QString::number(allPackageNum));
+    int packlen = packbuf[8]; // 包总长
+    QByteArray pack(packbuf, packlen); // 构造包
+    if(packbuf[packlen - 1] == (check(pack) & 0xff)){ // 校验字（1字节）正确
+        qDebug() << "收到包";
+        recPackageNum++;
+        recPackageLabel->setText(QString::number(recPackageNum));
+        packqueuelock[lastpack].lockForWrite();
+        packqueue[lastpack] = new Package(pack); // 构造新的包
+        packqueuelock[lastpack].unlock();
+        lastpack = (lastpack + 1) % MAXPACKNUM;
+    }
+    else{ // 校验字错误
+        dropPackageNum++;
+        dropPackageLabel->setText(QString::number(dropPackageNum));
+    }
+    packlock.unlock();
+    return;
 }
 
 int MainWindow::check(QByteArray message){ // 校验字算法

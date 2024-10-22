@@ -6,6 +6,7 @@ QT += bluetooth
 greaterThan(QT_MAJOR_VERSION, 5): QT += core bluetooth widgets
 
 HEADERS += header/mainwindow.h
+HEADERS += header/define.h
 HEADERS += header/package.h
 HEADERS += header/serialdialog.h
 HEADERS += header/serialmodule.h

@@ -3,38 +3,29 @@
 
 #include <QVector>
 
-// 三种包的包头，长度均为8字节（内容乱定的）
-#define COMMANDHEAD 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55
-#define DATAHEAD    0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA
-#define RETURNHEAD  0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A, 0x5A
-// 设备类型
-#define FPGA  0x00
-#define STM32 0xff
-
+// 包类别
 class Package{
     private:
         QByteArray content; // 包的原始内容
         enum TYPE{COMMAND = 0, DATA, RETURN, OTHER}type; // 包的类型，命令帧、数据帧、返回帧
 
     public:
-        Package(); // 构造函数
         Package(QByteArray originContent); // 构造函数
 };
 
+// 命令帧类别
 class CommandPackage : public Package{
     private:
         int packageNum; // 包号，1字节
         int commandCode; // 指令码，2字节
         int informationLenth; // 额外信息长度，2字节
         QByteArray information; // 额外信息，0-16字节
-
-        void fillContent(); // 填充content
     
     public:
         CommandPackage(QByteArray originContent); // 构造函数
-        CommandPackage(int packageNum, int commandCode, QByteArray info = NULL); // 构造函数，需要的信息为：指令码，额外信息（默认为空）
 };
 
+// 数据帧类别
 class DataPackage : public Package{
     private:
         int packageNum; // 包号
@@ -48,6 +39,7 @@ class DataPackage : public Package{
         DataPackage(QByteArray originContent); // 构造函数
 };
 
+// 返回帧类别
 class ReturnPackage : public Package{
     private:
         int packageNum; // 包号
