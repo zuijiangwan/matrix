@@ -25,8 +25,13 @@ void BlueToothModule::connectBlueTooth(){
 
 // 读取数据
 void BlueToothModule::readMsg(){
-    QByteArray data = socket->readAll(); // 读取所有数据
-    qDebug() << data;
+    if(recvlock.tryLockForWrite()){
+        QByteArray data = socket->readAll(); // 读取所有数据
+        memcpy(recvbuf + RECVSIZE, data.data(), data.size());
+        recvlock.unlock();
+        emit dataReceived(data.size());
+    }
+    return;
 }
 
 // 判断是否连接

@@ -30,6 +30,7 @@ MainWindow::MainWindow() : QMainWindow(){
     // USB线程
     usbModule = new USBModule();
     connect(connectUSBAct, SIGNAL(triggered()), usbModule, SLOT(connectUSB()));
+    connect(usbModule->usbReceive, SIGNAL(dataReceived(int)), this, SLOT(checkHead(int)));
 
     // 保存文件线程
     // saveFileThread = new SaveFileThread();
@@ -122,8 +123,8 @@ void MainWindow::checkHead(int inputdatalen){ // 检查收到的数据内是否�
 
     static int datawait = 0; // 待接收数据长度
     static int packdatalen = 0; // 包buffer中有效数据长度
-    int endpos = min(recvsize + inputdatalen, RECVBUFSIZE); // 有效数据末尾位置
-    int beginpos = datawait > 0 ? 0 : recvsize; // 有效数据起始位置
+    int endpos = min(RECVSIZE + inputdatalen, RECVBUFSIZE); // 有效数据末尾位置
+    int beginpos = datawait > 0 ? 0 : RECVSIZE; // 有效数据起始位置
 
     // 检查上一次是否有剩余的数据
     if(datawait > 0){ // 需要接收的数据总长已经确定
@@ -148,9 +149,9 @@ void MainWindow::checkHead(int inputdatalen){ // 检查收到的数据内是否�
         }
     }
     // 检查是否出现数据帧或返回帧包头
-    while(endpos - beginpos + 1 > recvsize){ // 只检查带有包总长的完整包头
-        if(memcmp(recvbuf + beginpos, dataHead, headsize) == 0 || memcmp(recvbuf + beginpos, returnHead, headsize) == 0){
-            int packlen = recvbuf[beginpos + headsize] << 8 | recvbuf[beginpos + headsize + 1]; // 包总长
+    while(endpos - beginpos + 1 > RECVSIZE){ // 只检查带有包总长的完整包头
+        if(memcmp(recvbuf + beginpos, dataHead, HEADSIZE) == 0 || memcmp(recvbuf + beginpos, returnHead, HEADSIZE) == 0){
+            int packlen = recvbuf[beginpos + HEADSIZE] << 8 | recvbuf[beginpos + HEADSIZE + 1]; // 包总长
             if(endpos - beginpos + 1 >= packlen){ // 若包已经接收完
                 packlock.lockForWrite();
                 memcpy(packbuf + packdatalen, recvbuf + beginpos, packlen);
@@ -172,7 +173,7 @@ void MainWindow::checkHead(int inputdatalen){ // 检查收到的数据内是否�
         beginpos++;
     }
     // 将buffer的最后几位移到最前面
-    memcpy(recvbuf, recvbuf + endpos - recvsize + 1, recvsize);
+    memcpy(recvbuf, recvbuf + endpos - RECVSIZE + 1, RECVSIZE);
     recvlock.unlock();
     return;
 }

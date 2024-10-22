@@ -10,6 +10,23 @@
 #include "savefilethread.h"
 #include "package.h"
 
+extern int allPackageNum; // 总帧数
+extern int sentPackageNum; // 已发送
+extern int recPackageNum; // 已接收
+extern int dropPackageNum; // 已丢弃
+
+extern char commandHead[HEADSIZE]; // 命令帧包头
+extern char dataHead[HEADSIZE]; // 数据帧包头
+extern char returnHead[HEADSIZE]; // 返回帧包头
+
+extern char recvbuf[RECVBUFSIZE]; // 接收数据缓冲区
+extern QReadWriteLock recvlock; // 读写锁
+extern char packbuf[MAXPACKSIZE]; // 包buffer
+extern QReadWriteLock packlock; // 包buffer的读写锁
+extern Package *packqueue[MAXPACKNUM]; // 收到的包队列，以循环队列的方式存储
+extern int lastpack; // 包队列的队首和队尾
+extern QReadWriteLock packqueuelock[MAXPACKNUM]; // 包buffer的读写锁
+
 class MainWindow : public QMainWindow, public Ui::MainWindow{
     Q_OBJECT
 
@@ -34,7 +51,6 @@ signals:
 
 private slots:
     void sendData(); // 发送数据
-    void receiveData(); // 接收数据
     void checkHead(int datalen); // 检查包，输入为新收到的数据的长度
     void checkPackage(); // 检查包buffer的内容，构造新的包
 

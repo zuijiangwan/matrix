@@ -12,17 +12,17 @@ class USBModule : public QObject
 
 private:
     USBDialog *usbDialog;
-    USBReceive *usbReceive;
     
-    CCyUSBDevice *USBDevice;	//USB设备
-	CCyUSBEndPoint *outEndPoint; //USB设备输出端点
-	CCyUSBEndPoint *inEndPoint;	//USB设备输入端点
+    CCyUSBDevice *USBDevice;	// USB设备
+	CCyUSBEndPoint *outEndPoint; // USB设备输出端点
+	CCyUSBEndPoint *inEndPoint;	// USB设备输入端点
 
 private slots:
     void connectUSB();
     void dataReceived(QByteArray data, int length);
 
 public:
+    USBReceive *usbReceive;
     USBModule();
     bool isConnected();
     bool sendData(QByteArray data);

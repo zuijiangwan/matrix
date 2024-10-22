@@ -2,17 +2,7 @@
 
 // 构造函数，原始内容包括包头和校验码
 Package::Package(QByteArray originContent) : content(originContent){
-    const unsigned char uCommandHead[] = {COMMANDHEAD}, uDataHead[] = {DATAHEAD}, uReturnHead[] = {RETURNHEAD};
-    const char *commandHead = (char *) uCommandHead, *dataHead = (char *) uDataHead, *returnHead = (char *) uReturnHead;
-    // 检验包头，确定包类型
-    if(originContent.startsWith(commandHead))
-        type = COMMAND;
-    else if(originContent.startsWith(dataHead))
-        type = DATA;
-    else if(originContent.startsWith(returnHead))
-        type = RETURN;
-    else
-        type = OTHER;
+    
 }
 
 CommandPackage::CommandPackage(QByteArray originContent) : Package::Package(originContent){

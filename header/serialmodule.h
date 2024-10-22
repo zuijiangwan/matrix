@@ -8,6 +8,7 @@
 #include "serialdialog.h"
 #include "define.h"
 
+extern char recvbuf[RECVBUFSIZE]; // 接收数据缓冲区
 extern QReadWriteLock recvlock; // 读写锁
 
 class SerialModule : public QObject{

@@ -2,6 +2,7 @@
 #define PACKAGE_H
 
 #include <QVector>
+#include "define.h"
 
 // 包类别
 class Package{
