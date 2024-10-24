@@ -2,50 +2,55 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-int check(int packLen, int status, std::vector<int> info);
+
+#define PACKAGENUM 10
+#define HEADSIZE 4
+#define PACKLENSIZE 2
+
+using namespace std;
+
+unsigned char check(vector<unsigned char> &package);
 int main(){
     std::ofstream fout("genret.txt");
-    for(int i = 1; i <= 100; i++){
-        // 随机生成包号状态码，额外信息长度和额外信息
-        int packageNum = rand() % 16;
-        int status = rand() % 1;
-        int infoLen = rand() % 16;
-        std::vector<int> info(infoLen);
-        for(int j = 0; j < infoLen; j++){
-            info[j] = rand() % 256;
+    for(int i = 0; i < PACKAGENUM; i++){
+        vector<unsigned char> package;
+        int infosize = rand() % 16; // 额外信息长度
+        int packlen = infosize + HEADSIZE + PACKLENSIZE + 3; // 包总长
+        // 包头
+        for(int j = 0; j < HEADSIZE; j++){
+            package.push_back(0x5A);
         }
-        // 包总长：8字节包头+1字节总长+1字节包号+1字节状态码+若干字节额外信息+1字节校验字
-        int packLen = 8 + 1 + 1 + 1 + infoLen + 1;
-        int checkCode = check(packLen, status, info) & 0xff;
+        // 包长
+        for(int j = 0; j < PACKLENSIZE; j++){
+            package.push_back(packlen >> (PACKLENSIZE - j - 1) * 8);
+        }
+        // 包号
+        package.push_back(rand()%16);
+        // 状态码
+        package.push_back(rand()%2);
+        // 额外信息
+        for(int j = 0; j < infosize; j++){
+            package.push_back(rand()%256);
+        }
+        // 校验字
+        package.push_back(check(package));
 
-        fout << std::dec << "Return Package " << i << ":"<< std::endl;
-        fout << "5a5a5a5a5a5a5a5a" << " "; // 包头
-        if(packLen < 16)
-            fout << "0";
-        fout << std::hex << packLen << " "; // 包总长
-        if(packageNum < 16)
-            fout << "0";
-        fout << std::hex << packageNum << " "; // 包号
-        if(status < 16)
-            fout << "0";
-        fout << std::hex << status << " "; // 状态码
-        for(auto j : info){
+        // 写入文件
+        for(auto j : package){
             if(j < 16)
                 fout << "0";
-            fout << std::hex << j << " "; // 额外信息
+            fout << hex << (unsigned int)j << " ";
         }
-        if(checkCode < 16)
-            fout << "0";
-        fout << std::hex << checkCode << '\n' << std::endl; // 校验字
+        fout << endl;
     }
+
     fout.close();
     return 0;
 }
 
-int check(int packLen, int status, std::vector<int> info){ // 校验字算法
-    // 算法内容现在是乱写的简单版checksum
-    int check = 0x5a * 8 + packLen + status;
-    for(auto i : info){
+unsigned char check(vector<unsigned char> &package){ // 校验字算法
+    unsigned char check = 0;
+    for(unsigned char i : package){
         check += i;
     }
     return check;

@@ -44,7 +44,7 @@ private:
 
     // 工具函数
     void sendCommand(int commandCode, QByteArray info = ""); // 将命令填入发送框内，参数为指令码和额外信息，额外信息默认为空
-    int check(QByteArray message); // 校验字算法
+    char check(QByteArray message); // 校验字算法
 
 signals:
     void packReceived(); // 已将完整的包存入包buffer

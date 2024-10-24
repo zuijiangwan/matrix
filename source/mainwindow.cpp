@@ -11,7 +11,7 @@
 MainWindow::MainWindow() : QMainWindow(){
     setupUi(this);
 
-    // 各种包的统计值
+    // 显示各种包的统计值
     allPackageLabel->setText(QString::number(allPackageNum));
     sentPackageLabel->setText(QString::number(sentPackageNum));
     recPackageLabel->setText(QString::number(recPackageNum));
@@ -123,12 +123,11 @@ void MainWindow::checkHead(int inputdatalen){ // 检查收到的数据内是否�
 
     static int datawait = 0; // 待接收数据长度
     static int packdatalen = 0; // 包buffer中有效数据长度
-    int endpos = min(RECVSIZE + inputdatalen, RECVBUFSIZE); // 有效数据末尾位置
-    int beginpos = datawait > 0 ? 0 : RECVSIZE; // 有效数据起始位置
+    int endpos = min(RECVSIZE + inputdatalen - 1, RECVBUFSIZE - 1); // 有效数据末尾位置
+    int beginpos = datawait > 0 ? RECVSIZE : 0; // 有效数据起始位置
 
-    // 检查上一次是否有剩余的数据
-    if(datawait > 0){ // 需要接收的数据总长已经确定
-        int datalen = endpos - beginpos;
+    if(datawait > 0){ // 检查上一次是否有剩余的数据
+        int datalen = endpos - beginpos + 1;
         if(datalen >= datawait){ // 若剩余数据已经接收完
             packlock.lockForWrite();
             memcpy(packbuf + packdatalen, recvbuf + beginpos, datawait);
@@ -170,10 +169,12 @@ void MainWindow::checkHead(int inputdatalen){ // 检查收到的数据内是否�
                 return;
             }
         }
-        beginpos++;
+        else
+            beginpos++;
     }
     // 将buffer的最后几位移到最前面
-    memcpy(recvbuf, recvbuf + endpos - RECVSIZE + 1, RECVSIZE);
+    int movesize = max(endpos - beginpos + 1, 0); // 需要移动的数据总长
+    memcpy(recvbuf, recvbuf + endpos - movesize + 1, movesize);
     recvlock.unlock();
     return;
 }
@@ -183,15 +184,19 @@ void MainWindow::checkPackage(){
     packlock.lockForRead(); // 上锁
     allPackageNum++; // 总包数增加
     allPackageLabel->setText(QString::number(allPackageNum));
-    int packlen = packbuf[8]; // 包总长
-    QByteArray pack(packbuf, packlen); // 构造包
-    if(packbuf[packlen - 1] == (check(pack) & 0xff)){ // 校验字（1字节）正确
-        qDebug() << "收到包";
+    int packlen = packbuf[HEADSIZE] << 8 | packbuf[HEADSIZE + 1]; // 包总长
+    QByteArray pack(packbuf, packlen-1); // 构造包（不带校验字）
+    if(packbuf[packlen - 1] == check(pack)){ // 校验字（1字节）正确
+        MessageBrowser->append("收到包");
         recPackageNum++;
         recPackageLabel->setText(QString::number(recPackageNum));
+
+        pack.append(packbuf[packlen - 1]); // 加上校验字
+
         packqueuelock[lastpack].lockForWrite();
         packqueue[lastpack] = new Package(pack); // 构造新的包
         packqueuelock[lastpack].unlock();
+
         lastpack = (lastpack + 1) % MAXPACKNUM;
     }
     else{ // 校验字错误
@@ -202,9 +207,9 @@ void MainWindow::checkPackage(){
     return;
 }
 
-int MainWindow::check(QByteArray message){ // 校验字算法
+char MainWindow::check(QByteArray message){ // 校验字算法，输入的包不带校验字
     // 算法内容现在是乱写的简单版checksum
-    int check = 0;
+    char check = 0;
     for(auto i : message){
         check += i;
     }

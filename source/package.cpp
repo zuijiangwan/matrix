@@ -6,7 +6,7 @@ Package::Package(QByteArray originContent) : content(originContent){
 }
 
 CommandPackage::CommandPackage(QByteArray originContent) : Package::Package(originContent){
-    packageNum = originContent[8]; // 包号
+    packageNum = originContent[HEADSIZE + PACKLENSIZE]; // 包号
     commandCode = originContent[9] << 8 | originContent[10]; // 指令码
     informationLenth = originContent[11] << 8 | originContent[12]; // 额外信息长度
     information = originContent.mid(13, informationLenth); // 额外信息
@@ -57,8 +57,7 @@ DataPackage::DataPackage(QByteArray originContent) : Package::Package(originCont
 }
 
 ReturnPackage::ReturnPackage(QByteArray originContent) : Package::Package(originContent){
-    packageNum = originContent[8];
-    status = originContent[9];
-    informationLenth = originContent[10] << 8 | originContent[11];
-    information = originContent.mid(12, informationLenth);
+    packageNum = originContent[HEADSIZE + PACKLENSIZE]; // 包号
+    status = originContent[HEADSIZE + PACKLENSIZE + 1]; // 状态码
+    information = originContent.mid(HEADSIZE + PACKLENSIZE + 2, originContent.size() - HEADSIZE - PACKLENSIZE - 2); // 额外信息
 }
