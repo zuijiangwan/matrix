@@ -19,7 +19,6 @@ private:
 
 private slots:
     void connectUSB();
-    void dataReceived(QByteArray data, int length);
 
 public:
     USBReceive *usbReceive;
@@ -27,8 +26,6 @@ public:
     bool isConnected();
     bool sendData(QByteArray data);
 
-public slots:
-    void receiveData();
 };
 
 #endif // USBMODULE_H

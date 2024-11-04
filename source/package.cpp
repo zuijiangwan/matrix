@@ -5,6 +5,11 @@ Package::Package(QByteArray originContent) : content(originContent){
     
 }
 
+// 判断是否是数据帧
+bool Package::isData(){
+    return type == DATA;
+}
+
 CommandPackage::CommandPackage(QByteArray originContent) : Package::Package(originContent){
     packageNum = originContent[HEADSIZE + PACKLENSIZE]; // 包号
     commandCode = originContent[9] << 8 | originContent[10]; // 指令码
@@ -13,15 +18,15 @@ CommandPackage::CommandPackage(QByteArray originContent) : Package::Package(orig
 }
 
 DataPackage::DataPackage(QByteArray originContent) : Package::Package(originContent){
-    dataLength = originContent[8] << 8 | originContent[9]; // 数据总长度
-    rowSize = originContent[10] << 8 | originContent[11]; // 行宽
-    columnSize = originContent[12] << 8 | originContent[13]; // 列宽
-    packageNum = originContent[14] << 24 | originContent[15] << 16 | originContent[16] << 8 | originContent[17]; // 包号
-    timeStamp = originContent[18] << 24 | originContent[19] << 16 | originContent[20] << 8 | originContent[21]; // 时间戳
-    deviceType = (originContent[22] == FPGA); // 设备类型
-    // 第23-26字节为保留字，从第27字节开始为数据
+    dataLength = originContent[HEADSIZE] << 8 | originContent[HEADSIZE + 1]; // 数据总长度
+    rowSize = originContent[ROWPOS] << 8 | originContent[ROWPOS + 1]; // 行宽
+    columnSize = originContent[COLUMNPOS] << 8 | originContent[COLUMNPOS + 1]; // 列宽
+    packageNum = originContent[PACKNUMPOS] << 24 | originContent[PACKNUMPOS + 1] << 16 | originContent[PACKNUMPOS + 2] << 8 | originContent[PACKNUMPOS + 3]; // 包号
+    timeStamp = originContent[TIMESTAMPPOS] << 24 | originContent[TIMESTAMPPOS + 1] << 16 | originContent[TIMESTAMPPOS + 2] << 8 | originContent[TIMESTAMPPOS + 3]; // 时间戳
+    deviceType = (originContent[DEVICETYPEPOS] == FPGA); // 设备类型
     // 填充数据
-    int dataIndex = 27; // 数据起始位置
+    // TODO: 确认FPGA和STM32设备的区别
+    int dataIndex = DATAPOS; // 数据起始位置
     if(deviceType){
         // STM32，数据精度12位
         bool needToRead = true; // 是否需要读取新字节

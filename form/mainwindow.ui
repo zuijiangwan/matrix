@@ -151,12 +151,12 @@
           <item>
            <widget class="QLabel" name="label_2">
             <property name="text">
-             <string>总帧数：</string>
+             <string>帧率：</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="allPackageLabel">
+           <widget class="QLabel" name="frameRateLabel">
             <property name="text">
              <string/>
             </property>
@@ -265,17 +265,11 @@
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
+       <layout class="QVBoxLayout" name="DrawLayout">
         <item>
-         <widget class="QGraphicsView" name="graphicsView_2"/>
-        </item>
-        <item>
-         <widget class="QGraphicsView" name="graphicsView"/>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <layout class="QHBoxLayout" name="DrawConfigLayout">
           <item>
-           <widget class="QCheckBox" name="checkBox_3">
+           <widget class="QCheckBox" name="DrawCheckBox">
             <property name="text">
              <string>开启绘图</string>
             </property>

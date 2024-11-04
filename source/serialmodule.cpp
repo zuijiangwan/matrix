@@ -27,9 +27,12 @@ bool SerialModule::send(QByteArray data){
 }
 
 void SerialModule::receive(){
-    if(recvlock.tryLockForWrite()){
+    if(recvlock.tryLockForWrite(0)){
         QByteArray data = port->readAll();
-        memcpy(recvbuf + RECVSIZE, data.data(), data.size());
+        #ifdef DEBUG
+        qDebug() << "Received data: " << data;
+        #endif
+        memcpy(recvbuf + RECVSIZE, data.data(), min(data.size(), RECVBUFSIZE - RECVSIZE));
         recvlock.unlock();
         emit dataReceived(data.size());
     }

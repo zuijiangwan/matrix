@@ -58,6 +58,11 @@ void BlueToothDialog::connectBluetooth(){
     socket->connectToService(address, QBluetoothUuid(uuid), QIODevice::ReadWrite); // 连接蓝牙，读写模式
 }
 
+// 断开蓝牙连接
+void BlueToothDialog::disconnectBluetooth(){
+    socket->disconnectFromService();
+}
+
 // 连接成功
 void BlueToothDialog::bltConnected(){
     QMessageBox::information(this, tr("information"), tr("连接成功！"));

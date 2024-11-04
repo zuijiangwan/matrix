@@ -25,9 +25,12 @@ void BlueToothModule::connectBlueTooth(){
 
 // 读取数据
 void BlueToothModule::readMsg(){
-    if(recvlock.tryLockForWrite()){
+    if(recvlock.tryLockForWrite(0)){
         QByteArray data = socket->readAll(); // 读取所有数据
-        memcpy(recvbuf + RECVSIZE, data.data(), data.size());
+        #ifdef DEBUG
+        qDebug() << "Received data: " << data;
+        #endif
+        memcpy(recvbuf + RECVSIZE, data.data(), min(data.size(), RECVBUFSIZE - RECVSIZE));
         recvlock.unlock();
         emit dataReceived(data.size());
     }

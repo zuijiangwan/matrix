@@ -2,6 +2,7 @@
 #define USBRECEIVE_H
 
 #include <QThread>
+#include <QReadWriteLock>
 #include <windows.h>
 #include "CyAPI.h"
 #include "define.h"
@@ -15,6 +16,8 @@ class USBReceive : public QThread{
 private:
     volatile bool stopped; // 控制线程是否中止
     CCyUSBDevice *USBDevice;
+    char USBRecvBuf[USBRECVBUFSIZE]; // USB的接收数据缓冲区
+    int USBRecvPos; // USB接收数据的写入位置
 
 protected:
     void run();

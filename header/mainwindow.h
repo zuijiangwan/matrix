@@ -2,11 +2,13 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QThread>
 #include "ui_mainwindow.h"
 #include "define.h"
 #include "serialmodule.h"
 #include "bluetoothmodule.h"
 #include "usbmodule.h"
+#include "qcustomplot.h"
 #include "savefilethread.h"
 #include "package.h"
 
@@ -24,8 +26,8 @@ extern QReadWriteLock recvlock; // 读写锁
 extern char packbuf[MAXPACKSIZE]; // 包buffer
 extern QReadWriteLock packlock; // 包buffer的读写锁
 extern Package *packqueue[MAXPACKNUM]; // 收到的包队列，以循环队列的方式存储
-extern int lastpack; // 包队列的队首和队尾
-extern QReadWriteLock packqueuelock[MAXPACKNUM]; // 包buffer的读写锁
+extern int nextpack; // 包队列的队首和队尾
+extern QReadWriteLock *packqueuelock[MAXPACKNUM]; // 包buffer的读写锁
 
 class MainWindow : public QMainWindow, public Ui::MainWindow{
     Q_OBJECT
@@ -35,6 +37,11 @@ public:
 
 private:
     Ui::MainWindow *ui;
+
+    // 绘图相关
+    QCustomPlot *customPlot; // 绘图框
+    QCPColorMap *colorMap; // 热力图
+    QThread *drawThread; // 绘图线程
 
     // 模块和线程
     SerialModule *serialModule; // 串口
@@ -48,6 +55,7 @@ private:
 
 signals:
     void packReceived(); // 已将完整的包存入包buffer
+    void drawPack(); // 给新的包画热力图
 
 private slots:
     void sendData(); // 发送数据

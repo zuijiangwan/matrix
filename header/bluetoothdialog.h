@@ -17,6 +17,7 @@ private slots:
     void addDeviceInfo(QBluetoothDeviceInfo info);
     void discoveryFinished();
     void connectBluetooth();
+    void disconnectBluetooth();
     void bltConnected();
 
 private:

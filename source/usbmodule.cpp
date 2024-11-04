@@ -7,7 +7,6 @@ USBModule::USBModule(){
     USBDevice->Close(); // 需要先关闭，否则状态会有误
 
     usbReceive = new USBReceive(USBDevice); // 创建USB接收线程
-    //connect(usbReceive, SIGNAL(dataReceived(QByteArray,int)), this, SLOT(dataReceived(QByteArray,int)));
 }
 
 void USBModule::connectUSB(){
@@ -31,21 +30,4 @@ bool USBModule::sendData(QByteArray data){
 
 bool USBModule::isConnected(){
     return USBDevice->IsOpen();
-}
-
-// 处理收到的数据
-void USBModule::dataReceived(QByteArray data, int length){
-    qDebug() << data;
-}
-
-void USBModule::receiveData(){
-    unsigned char recvBuf[256];
-    memset(recvBuf, 0, 256);
-    long length = 256;
-    USBDevice->BulkInEndPt->TimeOut = 10;
-    USBDevice->BulkInEndPt->XferData(recvBuf, length);
-    qDebug() << "接收内容：";
-    for(int i = 0; i < length; i++)
-        qDebug() << recvBuf[i];
-    qDebug() << "接收长度：" << length;
 }

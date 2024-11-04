@@ -12,6 +12,7 @@ class Package{
 
     public:
         Package(QByteArray originContent); // 构造函数
+        bool isData(); // 判断是否是数据帧
 };
 
 // 命令帧类别

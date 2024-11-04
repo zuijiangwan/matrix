@@ -30,6 +30,10 @@ void USBDialog::connectUSBDevice(){ // 连接USB设备
         return;
     }
 
+    if(USBDevice->IsOpen()){ // 如果已经连接，先断开连接
+        return;
+    }
+
     // 检查是否连接成功
     if(USBDevice->Open(PortList->currentRow())){
         QMessageBox::information(this, tr("information"), tr("连接成功！"));

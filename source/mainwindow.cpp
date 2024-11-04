@@ -7,12 +7,35 @@
 #include <QDialogButtonBox>
 #include <QLabel>
 #include <QCheckBox>
+#include <QTime>
 
 MainWindow::MainWindow() : QMainWindow(){
+    // 绘图
+    // customPlot = new QCustomPlot();
+    // DrawLayout->insertWidget(0, customPlot);
+    // colorMap = new QCPColorMap(customPlot->xAxis, customPlot->yAxis);
+    // colorMap->data()->setSize(20, 20); // 尺寸随便初始化一个
+    // colorMap->data()->setRange(QCPRange(-4, 4), QCPRange(-4, 4)); // 在键（x）和值（y）维上跨越坐标范围-4..4
+    // QCPColorScale *colorScale = new QCPColorScale(customPlot); // 添加色标:
+    // customPlot->plotLayout()->addElement(0, 1, colorScale); // 将其添加到主轴矩形的右侧
+    // colorScale->setType(QCPAxis::atRight); // 刻度应为垂直条，刻度线/坐标轴标签右侧（实际上，右侧已经是默认值）
+    // colorMap->setColorScale(colorScale); // 将颜色图与色标关联
+    // colorScale->axis()->setLabel("压感数据热力图");
+    // colorMap->setInterpolate(false);  // 禁止插值，显示色块
+    // QCPMarginGroup *marginGroup = new QCPMarginGroup(customPlot);
+    // customPlot->axisRect()->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
+    // colorScale->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
+    // customPlot->rescaleAxes(); // 重新缩放键（x）和值（y）轴，以便可以看到整个颜色图：
+    // customPlot->replot();
+
     setupUi(this);
 
+    // 初始化包队列的写锁
+    for(int i = 0; i < MAXPACKNUM; i++){
+        packqueuelock[i] = new QReadWriteLock();
+    }
+
     // 显示各种包的统计值
-    allPackageLabel->setText(QString::number(allPackageNum));
     sentPackageLabel->setText(QString::number(sentPackageNum));
     recPackageLabel->setText(QString::number(recPackageNum));
     dropPackageLabel->setText(QString::number(dropPackageNum));
@@ -27,6 +50,7 @@ MainWindow::MainWindow() : QMainWindow(){
     // 蓝牙线程
     blueToothModule = new BlueToothModule();
     connect(connectBlueToothAct, SIGNAL(triggered()), blueToothModule, SLOT(connectBlueTooth()));
+    connect(blueToothModule, SIGNAL(dataReceived(int)), this, SLOT(checkHead(int)));
     // USB线程
     usbModule = new USBModule();
     connect(connectUSBAct, SIGNAL(triggered()), usbModule, SLOT(connectUSB()));
@@ -36,6 +60,9 @@ MainWindow::MainWindow() : QMainWindow(){
     // saveFileThread = new SaveFileThread();
     // connect(savePositonAct, SIGNAL(triggered()), saveFileThread, SLOT(setFilePath()));
     // connect(SaveCheckBox, SIGNAL(stateChanged(int)), saveFileThread, SLOT(setState(int)));
+
+    // 绘图线程
+    // drawThread = new QThread();
 
     // 菜单栏的指令
     connect(beginSDAct, SIGNAL(triggered()), this, SLOT(beginSD())); // 开始SD卡传输
@@ -82,7 +109,6 @@ void MainWindow::sendData(){
         MessageEdit->clear();
         allPackageNum++;
         sentPackageNum++;
-        allPackageLabel->setText(QString::number(allPackageNum));
         sentPackageLabel->setText(QString::number(sentPackageNum));
     }
     else{ 
@@ -94,15 +120,17 @@ void MainWindow::sendData(){
 
 void MainWindow::sendCommand(int commandCode, QByteArray info){ // 把相应命令帧填入发送框
     QByteArray data; // 待发送命令
-    for(int i = 0; i < 8; i++) // 8字节包头
+    // 包头
+    for(int i = 0; i < HEADSIZE; i++){
         data.append(commandHead[i]);
+    }
+    int packsize = info.size() + HEADSIZE + PACKLENSIZE + 4 + info.size(); // 计算包总长
+    data.append(packsize >> 8); // 2字节包总长
+    data.append(packsize & 0xff);
     data.append(sentPackageNum);// 1字节包号
     data.append(commandCode >> 8); // 2字节指令码
     data.append(commandCode & 0xff);
-    data.append(info.size() >> 8); // 2字节额外信息长度
-    data.append(info.size() & 0xff);
-    for(auto i : info) // 额外信息
-        data.append(i);
+    data.insert(data.size(), info); // 额外信息
     data.append(check(data)); // 1字节校验字
 
     // 转成String，每一个字节间插一个空格
@@ -182,8 +210,6 @@ void MainWindow::checkHead(int inputdatalen){ // 检查收到的数据内是否�
 // 检查包的校验码是否正确
 void MainWindow::checkPackage(){
     packlock.lockForRead(); // 上锁
-    allPackageNum++; // 总包数增加
-    allPackageLabel->setText(QString::number(allPackageNum));
     int packlen = packbuf[HEADSIZE] << 8 | packbuf[HEADSIZE + 1]; // 包总长
     QByteArray pack(packbuf, packlen-1); // 构造包（不带校验字）
     if(packbuf[packlen - 1] == check(pack)){ // 校验字（1字节）正确
@@ -192,12 +218,14 @@ void MainWindow::checkPackage(){
         recPackageLabel->setText(QString::number(recPackageNum));
 
         pack.append(packbuf[packlen - 1]); // 加上校验字
+        packqueuelock[nextpack]->lockForWrite(); // 上锁
+        if(packqueue[nextpack]) // 若队列中有包，删除
+            delete packqueue[nextpack];
+        packqueue[nextpack] = new Package(pack); // 构造新的包
+        packqueuelock[nextpack]->unlock(); // 解锁
 
-        packqueuelock[lastpack].lockForWrite();
-        packqueue[lastpack] = new Package(pack); // 构造新的包
-        packqueuelock[lastpack].unlock();
-
-        lastpack = (lastpack + 1) % MAXPACKNUM;
+        nextpack = (nextpack + 1) % MAXPACKNUM;
+        emit(drawPack());
     }
     else{ // 校验字错误
         dropPackageNum++;
