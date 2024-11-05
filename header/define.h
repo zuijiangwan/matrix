@@ -1,7 +1,7 @@
 #ifndef DEFINE_H
 #define DEFINE_H
 
-// 调试模式
+// TODO：可更改模式。调试模式
 #define DEBUG
 
 // 为了使用CyAPI.lib
@@ -34,8 +34,5 @@
 // 设备类型
 #define FPGA  0x00
 #define STM32 0xff
-
-#define min(a, b) ((a) < (b) ? (a) : (b))
-#define max(a, b) ((a) > (b) ? (a) : (b))
 
 #endif // DEFINE_H

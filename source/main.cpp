@@ -16,8 +16,6 @@ Package *packqueue[MAXPACKNUM] = {nullptr}; // 收到的包队列，以循环队
 int nextpack = 0; // 包队列的队尾
 QReadWriteLock *packqueuelock[MAXPACKNUM]; // 包buffer的读写锁
 
-int allPackageNum = 0; // 总帧数
-int sentPackageNum = 0; // 已发送
 int recPackageNum = 0; // 已接收
 int dropPackageNum = 0; // 已丢弃
 

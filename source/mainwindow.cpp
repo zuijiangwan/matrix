@@ -35,26 +35,36 @@ MainWindow::MainWindow() : QMainWindow(){
         packqueuelock[i] = new QReadWriteLock();
     }
 
-    // 显示各种包的统计值
-    sentPackageLabel->setText(QString::number(sentPackageNum));
+    // 初始化和显示各种包的统计值
     recPackageLabel->setText(QString::number(recPackageNum));
     dropPackageLabel->setText(QString::number(dropPackageNum));
+    packageNum = 0;
 
+    // 收发相关
     connect(SendButton, SIGNAL(clicked()), this, SLOT(sendData())); // 发送按钮
+    connect(this, SIGNAL(dataReceived(int)), this, SLOT(checkHead(int))); // 收到新内容
     connect(this, SIGNAL(packReceived()), this, SLOT(checkPackage())); // 检查包buffer的内容，构造新的包
 
-    // 串口线程
-    serialModule = new SerialModule();
-    connect(connectSerialAct, SIGNAL(triggered()), serialModule, SLOT(connectSerial()));
-    connect(serialModule, SIGNAL(dataReceived(int)), this, SLOT(checkHead(int)));
-    // 蓝牙线程
-    blueToothModule = new BlueToothModule();
-    connect(connectBlueToothAct, SIGNAL(triggered()), blueToothModule, SLOT(connectBlueTooth()));
-    connect(blueToothModule, SIGNAL(dataReceived(int)), this, SLOT(checkHead(int)));
-    // USB线程
-    usbModule = new USBModule();
-    connect(connectUSBAct, SIGNAL(triggered()), usbModule, SLOT(connectUSB()));
-    connect(usbModule->usbReceive, SIGNAL(dataReceived(int)), this, SLOT(checkHead(int)));
+    // 串口
+    serialDialog = nullptr; // 初始化串口连接窗口
+    port = new QSerialPort(); // 初始化串口端口
+    connect(connectSerialAct, SIGNAL(triggered()), this, SLOT(connectSerial()));
+    connect(port, SIGNAL(readyRead()), this, SLOT(serialReceive()));
+    // 蓝牙
+    blueToothDialog = nullptr; // 初始化蓝牙连接窗口
+    localDevice = new QBluetoothLocalDevice(this); // 创建本地设备对象
+    if(localDevice->hostMode() == QBluetoothLocalDevice::HostPoweredOff) // 打开本地蓝牙
+        localDevice->powerOn();
+    socket = new QBluetoothSocket(QBluetoothServiceInfo::RfcommProtocol); // 创建套接字对象
+    connect(connectBlueToothAct, SIGNAL(triggered()), this, SLOT(connectBlueTooth()));
+    connect(socket, SIGNAL(readyRead()), this, SLOT(bluetoothReceive()));
+    // USB
+    usbDialog = NULL; // USB连接窗口
+    USBDevice = new CCyUSBDevice(); // 创建USB设备对象
+    USBDevice->Close(); // 需要先关闭，否则状态会有误
+    usbReceive = new USBReceive(USBDevice); // 创建USB接收线程
+    connect(connectUSBAct, SIGNAL(triggered()), this, SLOT(connectUSB()));
+    connect(usbReceive, SIGNAL(dataReceived(int)), this, SLOT(checkHead(int)));
 
     // 保存文件线程
     // saveFileThread = new SaveFileThread();
@@ -102,14 +112,12 @@ void MainWindow::sendData(){
     else
         data = MessageEdit->toPlainText().toLatin1();
 
-    // 三个线程都尝试发送数据，只要有一个发送成功，即视为发送成功
-    if(serialModule->send(data) || blueToothModule->sendMsg(data) || usbModule->sendData(data)){ 
+    // 三个IO端口都尝试发送数据，只要有一个发送成功，即视为发送成功
+    if(serialSend(data) || bluetoothSend(data) || USBSend(data)){ 
         // 若发送了数据，则清空输入框并显示发送的数据，包号自增
         MessageBrowser->append("发送：" + MessageEdit->toPlainText());
         MessageEdit->clear();
-        allPackageNum++;
-        sentPackageNum++;
-        sentPackageLabel->setText(QString::number(sentPackageNum));
+        packageNum++;
     }
     else{ 
         // 否则，弹出提示框
@@ -127,7 +135,7 @@ void MainWindow::sendCommand(int commandCode, QByteArray info){ // 把相应命�
     int packsize = info.size() + HEADSIZE + PACKLENSIZE + 4 + info.size(); // 计算包总长
     data.append(packsize >> 8); // 2字节包总长
     data.append(packsize & 0xff);
-    data.append(sentPackageNum);// 1字节包号
+    data.append(packageNum);// 1字节包号
     data.append(commandCode >> 8); // 2字节指令码
     data.append(commandCode & 0xff);
     data.insert(data.size(), info); // 额外信息

@@ -7,7 +7,6 @@
 #include "../header/bluetoothdialog.h"
 
 BlueToothDialog::BlueToothDialog(QBluetoothSocket *socket) : socket(socket){
-    // 创建对象
     setupUi(this);
 
     // 创建发现设备对象
