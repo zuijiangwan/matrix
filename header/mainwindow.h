@@ -45,6 +45,9 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    
+    char packageNum; // 一字节命令帧包号
+    int lastRecPackageNum; // 计算fps用
 
     // 绘图相关
     QCustomPlot *customPlot; // 绘图框
@@ -71,8 +74,6 @@ private:
     // 工具函数
     void sendCommand(int commandCode, QByteArray info = ""); // 将命令填入发送框内，参数为指令码和额外信息，额外信息默认为空
     char check(QByteArray message); // 校验字算法
-
-    char packageNum; // 一字节命令帧包号
 
 signals:
     void dataReceived(int datalen); // 已将输入数据存入读取buffer，返回值为收到的数据的长度
@@ -115,6 +116,8 @@ private slots:
     // USB相关
     void connectUSB(); // 连接USB
     bool USBSend(QByteArray data); // USB发送数据
+
+    void fps(); // 计算帧率
 
 };
 

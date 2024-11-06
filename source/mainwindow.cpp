@@ -98,6 +98,20 @@ MainWindow::MainWindow() : QMainWindow(){
     connect(setSizeAct, SIGNAL(triggered()), this, SLOT(setSize())); // 设置数据大小
     connect(turnOnAct, SIGNAL(triggered()), this, SLOT(turnOn())); // 开灯
     connect(turnOffAct, SIGNAL(triggered()), this, SLOT(turnOff())); // 关灯
+
+    // 计时器，算fps和丢包率用
+    lastRecPackageNum = 0;
+    QTimer *timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(fps()));
+    timer->start(1000); // TODO：计算丢包率和fps的更新时间间隔，可修改，单位为ms
+}
+
+// 计算fps和丢包率，指收到的包的帧率
+void MainWindow::fps(){ 
+    fpsLabel->setText(QString::number(recPackageNum - lastRecPackageNum));
+    lastRecPackageNum = recPackageNum;
+    if(recPackageNum + dropPackageNum != 0)
+        loseRateLabel->setText(QString::number(dropPackageNum * 100 / (recPackageNum + dropPackageNum)) + "%");
 }
 
 void MainWindow::sendData(){

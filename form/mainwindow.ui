@@ -156,9 +156,16 @@
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="frameRateLabel">
+           <widget class="QLabel" name="fpsLabel">
             <property name="text">
              <string/>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>帧/秒</string>
             </property>
            </widget>
           </item>
@@ -266,6 +273,12 @@
       </item>
       <item>
        <layout class="QVBoxLayout" name="DrawLayout">
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_2"/>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_3"/>
+        </item>
         <item>
          <layout class="QHBoxLayout" name="DrawConfigLayout">
           <item>
