@@ -19,15 +19,62 @@ bool MainWindow::serialSend(QByteArray data){ // 串口发送数据
 }
 
 void MainWindow::serialReceive(){ // 串口接收数据
-    if(recvlock.tryLockForWrite(0)){
-        QByteArray data = port->readAll();
-        #ifdef DEBUG
-        qDebug() << "Received data: " << data;
-        #endif
-        memcpy(recvbuf + RECVSIZE, data.data(), min(data.size(), RECVBUFSIZE - RECVSIZE));
-        recvlock.unlock();
-        emit dataReceived(data.size());
+    static QByteArray data;
+    data.append(port->readAll());
+    int index = -1, remainsize = min(data.size(), 4); // remainsize代表data最后的一段要保留的数据的长度
+    while((index = data.indexOf(dataHead, index + 1)) != -1){ // 处理数据帧
+        if(index + 6 >= data.size()){
+            remainsize = data.size() - index;
+            break;
+        }
+        int lenth = (data[index + 4] & 0xff) << 16 | (data[index + 5] & 0xff) << 8 | (data[index + 6] & 0xff);
+        if(data.size() - index >= lenth){ // 包收完了
+            lastpack = new QByteArray(data + index, lenth);
+            saveContent(lastpack);
+            if(checkPackage(*lastpack)){ // 校验字正确
+                recPackageNum++;
+                recPackageLabel->setText(QString::number(recPackageNum));
+                packPerSec++;
+                bytePerSec += lenth;
+                //if(SaveCheckBox->isChecked()) // 若勾选了保存文件选项
+                    //saveContent(lastpack); // 保存数据
+            }
+            else{ // 校验字错误
+                dropPackageNum++;
+                dropPackageLabel->setText(QString::number(dropPackageNum));
+            }
+            remainsize = data.size() - index - lenth;
+        }
+        else{ // 包没收完
+            remainsize = data.size() - index;
+        }
     }
+    index = -1;
+    while((index = data.indexOf(returnHead, index + 1)) != -1){ // 处理返回帧
+        if(index + 6 >= data.size()){
+            remainsize = data.size() - index;
+            break;
+        }
+        int lenth = (data[index + 4] & 0xff) << 16 | (data[index + 5] & 0xff) << 8 | (data[index + 6] & 0xff);
+        if(data.size() - index >= lenth){ // 包收完了
+            lastpack = new QByteArray(data + index, lenth);
+            if(checkPackage(*lastpack)){ // 校验字正确
+                recPackageNum++;
+                recPackageLabel->setText(QString::number(recPackageNum));
+                packPerSec++;
+            }
+            else{ // 校验字错误
+                dropPackageNum++;
+                dropPackageLabel->setText(QString::number(dropPackageNum));
+                bytePerSec += lenth;
+            }
+            remainsize = data.size() - index - lenth;
+        }
+        else{ // 包没收完
+            remainsize = data.size() - index;
+        }
+    }
+    data = data.right(remainsize);
     return;
 }
 
@@ -40,17 +87,64 @@ void MainWindow::connectBlueTooth(){
     blueToothDialog->activateWindow();
 }
 
-// 读取数据
+// 蓝牙读取数据
 void MainWindow::bluetoothReceive(){
-    if(recvlock.tryLockForWrite(0)){
-        QByteArray data = socket->readAll(); // 读取所有数据
-        #ifdef DEBUG
-        qDebug() << "Received data: " << data;
-        #endif
-        memcpy(recvbuf + RECVSIZE, data.data(), min(data.size(), RECVBUFSIZE - RECVSIZE));
-        recvlock.unlock();
-        emit dataReceived(data.size());
+    static QByteArray data;
+    data.append(socket->readAll());
+    int index = -1, remainsize = min(data.size(), 4); // remainsize代表data最后的一段要保留的数据的长度
+    while((index = data.indexOf(dataHead, index + 1)) != -1){ // 处理数据帧
+        if(index + 6 >= data.size()){
+            remainsize = data.size() - index;
+            break;
+        }
+        int lenth = (data[index + 4] & 0xff) << 16 | (data[index + 5] & 0xff) << 8 | (data[index + 6] & 0xff);
+        if(data.size() - index >= lenth){ // 包收完了
+            lastpack = new QByteArray(data + index, lenth);
+            saveContent(lastpack);
+            if(checkPackage(*lastpack)){ // 校验字正确
+                recPackageNum++;
+                recPackageLabel->setText(QString::number(recPackageNum));
+                packPerSec++;
+                bytePerSec += lenth;
+                if(SaveCheckBox->isChecked()) // 若勾选了保存文件选项
+                    saveContent(lastpack); // 保存数据
+            }
+            else{ // 校验字错误
+                dropPackageNum++;
+                dropPackageLabel->setText(QString::number(dropPackageNum));
+            }
+            remainsize = data.size() - index - lenth;
+        }
+        else{ // 包没收完
+            remainsize = data.size() - index;
+        }
     }
+    index = -1;
+    while((index = data.indexOf(returnHead, index + 1)) != -1){ // 处理返回帧
+        if(index + 6 >= data.size()){
+            remainsize = data.size() - index;
+            break;
+        }
+        int lenth = (data[index + 4] & 0xff) << 16 | (data[index + 5] & 0xff) << 8 | (data[index + 6] & 0xff);
+        if(data.size() - index >= lenth){ // 包收完了
+            lastpack = new QByteArray(data + index, lenth);
+            if(checkPackage(*lastpack)){ // 校验字正确
+                recPackageNum++;
+                recPackageLabel->setText(QString::number(recPackageNum));
+                packPerSec++;
+            }
+            else{ // 校验字错误
+                dropPackageNum++;
+                dropPackageLabel->setText(QString::number(dropPackageNum));
+                bytePerSec += lenth;
+            }
+            remainsize = data.size() - index - lenth;
+        }
+        else{ // 包没收完
+            remainsize = data.size() - index;
+        }
+    }
+    data = data.right(remainsize);
     return;
 }
 
@@ -80,4 +174,64 @@ bool MainWindow::USBSend(QByteArray data){
     
     LONG bytesToSend = data.size();
     return USBDevice->BulkOutEndPt->XferData((unsigned char *)data.data(), bytesToSend);
+}
+
+// USB读取数据
+void MainWindow::USBReceive(){
+    static QByteArray data;
+    data.append(usbReceive->readAll());
+    int index = -1, remainsize = min(data.size(), 4); // remainsize代表data最后的一段要保留的数据的长度
+    while((index = data.indexOf(dataHead, index + 1)) != -1){ // 处理数据帧
+        if(index + 6 >= data.size()){
+            remainsize = data.size() - index;
+            break;
+        }
+        int lenth = (data[index + 4] & 0xff) << 16 | (data[index + 5] & 0xff) << 8 | (data[index + 6] & 0xff);
+        if(data.size() - index >= lenth){ // 包收完了
+            lastpack = new QByteArray(data + index, lenth);
+            if(checkPackage(*lastpack)){ // 校验字正确
+                recPackageNum++;
+                recPackageLabel->setText(QString::number(recPackageNum));
+                packPerSec++;
+                bytePerSec += lenth;
+                if(SaveCheckBox->isChecked()) // 若勾选了保存文件选项
+                    saveContent(lastpack); // 保存数据
+            }
+            else{ // 校验字错误
+                dropPackageNum++;
+                dropPackageLabel->setText(QString::number(dropPackageNum));
+            }
+            remainsize = data.size() - index - lenth;
+        }
+        else{ // 包没收完
+            remainsize = data.size() - index;
+        }
+    }
+    index = -1;
+    while((index = data.indexOf(returnHead, index + 1)) != -1){ // 处理返回帧
+        if(index + 6 >= data.size()){
+            remainsize = data.size() - index;
+            break;
+        }
+        int lenth = (data[index + 4] & 0xff) << 16 | (data[index + 5] & 0xff) << 8 | (data[index + 6] & 0xff);
+        if(data.size() - index >= lenth){ // 包收完了
+            lastpack = new QByteArray(data + index, lenth);
+            if(checkPackage(*lastpack)){ // 校验字正确
+                recPackageNum++;
+                recPackageLabel->setText(QString::number(recPackageNum));
+                packPerSec++;
+            }
+            else{ // 校验字错误
+                dropPackageNum++;
+                dropPackageLabel->setText(QString::number(dropPackageNum));
+                bytePerSec += lenth;
+            }
+            remainsize = data.size() - index - lenth;
+        }
+        else{ // 包没收完
+            remainsize = data.size() - index;
+        }
+    }
+    data = data.right(remainsize);
+    return;
 }

@@ -8,11 +8,12 @@
 class Package{
     private:
         QByteArray content; // 包的原始内容
-        enum TYPE{COMMAND = 0, DATA, RETURN, OTHER}type; // 包的类型，命令帧、数据帧、返回帧
 
     public:
+        Package(){}; // 默认构造函数
         Package(QByteArray originContent); // 构造函数
-        bool isData(); // 判断是否是数据帧
+        virtual bool isData(){return false;}; // 判断是否是数据帧
+        virtual QString decode(){return "";}; // 解码包内容，是一个虚函数
 };
 
 // 命令帧类别
@@ -25,6 +26,8 @@ class CommandPackage : public Package{
     
     public:
         CommandPackage(QByteArray originContent); // 构造函数
+        QString decode(); // 解码包内容
+        bool isData(); // 判断是否是数据帧
 };
 
 // 数据帧类别
@@ -39,6 +42,8 @@ class DataPackage : public Package{
 
     public:
         DataPackage(QByteArray originContent); // 构造函数
+        QString decode(); // 解码包内容
+        bool isData(); // 判断是否是数据帧
 };
 
 // 返回帧类别
@@ -51,6 +56,8 @@ class ReturnPackage : public Package{
 
     public:
         ReturnPackage(QByteArray originContent); // 构造函数
+        QString decode(); // 解码包内容
+        bool isData(); // 判断是否是数据帧
 };
 
 #endif // PACKAGE_H

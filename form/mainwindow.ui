@@ -51,7 +51,7 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
-           <widget class="QCheckBox" name="checkBox">
+           <widget class="QCheckBox" name="originContentCheckBox">
             <property name="text">
              <string>显示原数据</string>
             </property>
@@ -71,7 +71,7 @@
            </spacer>
           </item>
           <item>
-           <widget class="QCheckBox" name="checkBox_2">
+           <widget class="QCheckBox" name="ignoreDataCheckBox">
             <property name="text">
              <string>忽略数据帧</string>
             </property>
@@ -109,6 +109,12 @@
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>200</height>
+           </size>
           </property>
          </widget>
         </item>
@@ -163,13 +169,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>帧/秒</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <spacer name="horizontalSpacer_4">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
@@ -185,12 +184,12 @@
           <item>
            <widget class="QLabel" name="label_3">
             <property name="text">
-             <string>丢包率：</string>
+             <string>速率：</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="loseRateLabel">
+           <widget class="QLabel" name="rateLabel">
             <property name="text">
              <string/>
             </property>
@@ -274,10 +273,7 @@
       <item>
        <layout class="QVBoxLayout" name="DrawLayout">
         <item>
-         <layout class="QVBoxLayout" name="verticalLayout_2"/>
-        </item>
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout_3"/>
+         <layout class="QVBoxLayout" name="heatmapLayout"/>
         </item>
         <item>
          <layout class="QHBoxLayout" name="DrawConfigLayout">

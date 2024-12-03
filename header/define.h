@@ -18,18 +18,18 @@
 #define RECVSIZE (HEADSIZE+PACKLENSIZE-1) // 接收buffer每次最后会留下一段数据移到最前面
 
 // TODO：包头
-#define COMMANDHEAD 0x55, 0x55, 0x55, 0x55
+#define COMMANDHEAD 0x24, 0x68, 0xAC, 0xE0
 #define DATAHEAD    0x13, 0x57, 0x9A, 0xCE
-#define RETURNHEAD  0x5A, 0x5A, 0x5A, 0x5A
+#define RETURNHEAD  0x13, 0x57, 0x9A, 0xCE
 
 // 数据帧相关数据
-#define ROWPOS 6
-#define COLUMNPOS 8
-#define PACKNUMPOS 10
-#define TIMESTAMPPOS 14
-#define DEVICETYPEPOS 18
-#define RECVPOS 19
-#define DATAPOS 23
+#define ROWPOS 7
+#define COLUMNPOS 9
+#define PACKNUMPOS 11
+#define TIMESTAMPPOS 15
+#define DEVICETYPEPOS 19
+#define RECVPOS 20
+#define DATAPOS 24
 
 // 设备类型
 #define FPGA  0x00

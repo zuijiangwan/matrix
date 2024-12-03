@@ -6,6 +6,9 @@
 #include <QSerialPort>
 #include <QBluetoothLocalDevice>
 #include <QBluetoothSocket>
+#include <QFileDialog>
+#include <QFile>
+#include <QTextStream>
 #include <windows.h>
 #include "CyAPI.h"
 #include "ui_mainwindow.h"
@@ -42,20 +45,26 @@ class MainWindow : public QMainWindow, public Ui::MainWindow{
 
 public:
     MainWindow();
+    ~MainWindow();
 
 private:
     Ui::MainWindow *ui;
     
     char packageNum; // 一字节命令帧包号
-    int lastRecPackageNum; // 计算fps用
+    
+    // 计算fps和带宽用
+    int packPerSec; // 每秒包数
+    long long bytePerSec; // 每秒字节数
 
     // 绘图相关
     QCustomPlot *customPlot; // 绘图框
-    QCPColorMap *colorMap; // 热力图
-    QThread *drawThread; // 绘图线程
+    QCPColorMap *heatmap; // 热力图
+    QByteArray *lastpack;
+    int rowSize, columnSize; // 矩阵规模
+    bool deviceType; // 设备类型
 
     // 模块和线程
-    SaveFileThread *saveFileThread;
+    // SaveFileThread *saveFileThread;
 
     // 串口相关
     SerialDialog *serialDialog; // 串口连接窗口
@@ -71,19 +80,29 @@ private:
 	CCyUSBEndPoint *outEndPoint; // USB设备输出端点
 	CCyUSBEndPoint *inEndPoint;	// USB设备输入端点
 
+    // 保存文件相关
+    QString fileName; // 文件名
+    QFile *file; // 保存文件
+    QTextStream *stream; // 数据流
+
+    QByteArray lastContent; // 最新的原始包数据
+    Package lastPackage; // 最新的包
+
     // 工具函数
     void sendCommand(int commandCode, QByteArray info = ""); // 将命令填入发送框内，参数为指令码和额外信息，额外信息默认为空
-    char check(QByteArray message); // 校验字算法
+    char check(QByteArray &message); // 校验字算法
+    bool checkPackage(QByteArray &message); // 检查包的校验码是否正确
 
 signals:
     void dataReceived(int datalen); // 已将输入数据存入读取buffer，返回值为收到的数据的长度
     void packReceived(); // 已将完整的包存入包buffer
     void drawPack(); // 给新的包画热力图
+    void newContent(); // 有新的包内容
+    void newPackage(); // 有新的包
 
 private slots:
     void sendData(); // 发送数据
     void checkHead(int datalen); // 检查包，输入为新收到的数据的长度
-    void checkPackage(); // 检查包buffer的内容，构造新的包
 
     // 菜单栏相关
     void beginSD(){sendCommand(0x00);} // 开始SD卡传输;
@@ -116,8 +135,19 @@ private slots:
     // USB相关
     void connectUSB(); // 连接USB
     bool USBSend(QByteArray data); // USB发送数据
+    void USBReceive(); // USB接收数据
+
+    // 保存文件相关
+    void setFilePath(); // 设置保存文件路径
+    void saveContent(QByteArray *data); // 保存数据
+
+    // 绘图相关
+    void setupHeatmap(); // 设置热力图
+    void refreshHeatmap(); // 刷新热力图
 
     void fps(); // 计算帧率
+    void generatePack(); // 构造新的包
+    void refreshMessage(); // 更新消息记录
 
 };
 

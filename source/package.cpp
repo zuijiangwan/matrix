@@ -1,13 +1,8 @@
 #include "../header/package.h"
 
-// 构造函数，原始内容包括包头和校验码
+// 构造函数
 Package::Package(QByteArray originContent) : content(originContent){
-    
-}
 
-// 判断是否是数据帧
-bool Package::isData(){
-    return type == DATA;
 }
 
 CommandPackage::CommandPackage(QByteArray originContent) : Package::Package(originContent){
@@ -15,6 +10,15 @@ CommandPackage::CommandPackage(QByteArray originContent) : Package::Package(orig
     commandCode = originContent[9] << 8 | originContent[10]; // 指令码
     informationLenth = originContent[11] << 8 | originContent[12]; // 额外信息长度
     information = originContent.mid(13, informationLenth); // 额外信息
+}
+
+QString CommandPackage::decode(){
+    QString result("命令帧");
+    return result;
+}
+
+bool CommandPackage::isData(){
+    return false;
 }
 
 DataPackage::DataPackage(QByteArray originContent) : Package::Package(originContent){
@@ -61,8 +65,26 @@ DataPackage::DataPackage(QByteArray originContent) : Package::Package(originCont
     }
 }
 
+QString DataPackage::decode(){
+    QString result("数据帧");
+    return result;
+}
+
+bool DataPackage::isData(){
+    return true;
+}
+
 ReturnPackage::ReturnPackage(QByteArray originContent) : Package::Package(originContent){
     packageNum = originContent[HEADSIZE + PACKLENSIZE]; // 包号
     status = originContent[HEADSIZE + PACKLENSIZE + 1]; // 状态码
     information = originContent.mid(HEADSIZE + PACKLENSIZE + 2, originContent.size() - HEADSIZE - PACKLENSIZE - 2); // 额外信息
+}
+
+QString ReturnPackage::decode(){
+    QString result("返回帧");
+    return result;
+}
+
+bool ReturnPackage::isData(){
+    return false;
 }

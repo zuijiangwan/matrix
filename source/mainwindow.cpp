@@ -11,22 +11,9 @@
 
 MainWindow::MainWindow() : QMainWindow(){
     // 绘图
-    // customPlot = new QCustomPlot();
-    // DrawLayout->insertWidget(0, customPlot);
-    // colorMap = new QCPColorMap(customPlot->xAxis, customPlot->yAxis);
-    // colorMap->data()->setSize(20, 20); // 尺寸随便初始化一个
-    // colorMap->data()->setRange(QCPRange(-4, 4), QCPRange(-4, 4)); // 在键（x）和值（y）维上跨越坐标范围-4..4
-    // QCPColorScale *colorScale = new QCPColorScale(customPlot); // 添加色标:
-    // customPlot->plotLayout()->addElement(0, 1, colorScale); // 将其添加到主轴矩形的右侧
-    // colorScale->setType(QCPAxis::atRight); // 刻度应为垂直条，刻度线/坐标轴标签右侧（实际上，右侧已经是默认值）
-    // colorMap->setColorScale(colorScale); // 将颜色图与色标关联
-    // colorScale->axis()->setLabel("压感数据热力图");
-    // colorMap->setInterpolate(false);  // 禁止插值，显示色块
-    // QCPMarginGroup *marginGroup = new QCPMarginGroup(customPlot);
-    // customPlot->axisRect()->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
-    // colorScale->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
-    // customPlot->rescaleAxes(); // 重新缩放键（x）和值（y）轴，以便可以看到整个颜色图：
-    // customPlot->replot();
+    //customPlot = new QCustomPlot();
+    //heatmapLayout->addWidget(customPlot);
+    //heatmap = nullptr;
 
     setupUi(this);
 
@@ -43,7 +30,9 @@ MainWindow::MainWindow() : QMainWindow(){
     // 收发相关
     connect(SendButton, SIGNAL(clicked()), this, SLOT(sendData())); // 发送按钮
     connect(this, SIGNAL(dataReceived(int)), this, SLOT(checkHead(int))); // 收到新内容
-    connect(this, SIGNAL(packReceived()), this, SLOT(checkPackage())); // 检查包buffer的内容，构造新的包
+    //connect(this, SIGNAL(packReceived()), this, SLOT(checkPackage())); // 检查包buffer的内容，构造新的包
+    connect(this, SIGNAL(newContent()), this, SLOT(generatePack())); // 构造新的包
+    connect(this, SIGNAL(newPackage()), this, SLOT(refreshMessage())); // 更新消息记录
 
     // 串口
     serialDialog = nullptr; // 初始化串口连接窗口
@@ -62,17 +51,12 @@ MainWindow::MainWindow() : QMainWindow(){
     usbDialog = NULL; // USB连接窗口
     USBDevice = new CCyUSBDevice(); // 创建USB设备对象
     USBDevice->Close(); // 需要先关闭，否则状态会有误
-    usbReceive = new USBReceive(USBDevice); // 创建USB接收线程
+    usbReceive = new class USBReceive(USBDevice, MessageBrowser, recPackageLabel, dropPackageLabel); // 创建USB接收线程
     connect(connectUSBAct, SIGNAL(triggered()), this, SLOT(connectUSB()));
-    connect(usbReceive, SIGNAL(dataReceived(int)), this, SLOT(checkHead(int)));
+    connect(usbReceive, SIGNAL(readReady()), this, SLOT(USBReceive()));
 
-    // 保存文件线程
-    // saveFileThread = new SaveFileThread();
-    // connect(savePositonAct, SIGNAL(triggered()), saveFileThread, SLOT(setFilePath()));
-    // connect(SaveCheckBox, SIGNAL(stateChanged(int)), saveFileThread, SLOT(setState(int)));
-
-    // 绘图线程
-    // drawThread = new QThread();
+    // 保存文件
+    connect(savePositonAct, SIGNAL(triggered()), this, SLOT(setFilePath()));
 
     // 菜单栏的指令
     connect(beginSDAct, SIGNAL(triggered()), this, SLOT(beginSD())); // 开始SD卡传输
@@ -99,19 +83,74 @@ MainWindow::MainWindow() : QMainWindow(){
     connect(turnOnAct, SIGNAL(triggered()), this, SLOT(turnOn())); // 开灯
     connect(turnOffAct, SIGNAL(triggered()), this, SLOT(turnOff())); // 关灯
 
-    // 计时器，算fps和丢包率用
-    lastRecPackageNum = 0;
-    QTimer *timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), this, SLOT(fps()));
-    timer->start(1000); // TODO：计算丢包率和fps的更新时间间隔，可修改，单位为ms
+    // fps计时器，算fps和带宽用
+    packPerSec = 0;
+    bytePerSec = 0;
+    QTimer *fpstimer = new QTimer(this);
+    connect(fpstimer, SIGNAL(timeout()), this, SLOT(fps()));
+    fpstimer->start(1000); // TODO：计算丢包率和fps的更新时间间隔，可修改，单位为ms
+
+    // 绘图计时器，更新热力图用
+
+    setFilePath(); // 设置文件路径
 }
 
-// 计算fps和丢包率，指收到的包的帧率
+MainWindow::~MainWindow(){
+    // 关闭文件
+    if(file)
+        file->close();
+}
+
+// 计算fps和带宽，指收到的包的帧率
 void MainWindow::fps(){ 
-    fpsLabel->setText(QString::number(recPackageNum - lastRecPackageNum));
-    lastRecPackageNum = recPackageNum;
-    if(recPackageNum + dropPackageNum != 0)
-        loseRateLabel->setText(QString::number(dropPackageNum * 100 / (recPackageNum + dropPackageNum)) + "%");
+    fpsLabel->setText(QString::number(packPerSec) + "/s");
+    packPerSec = 0;
+
+    long long displayBytePerSec = bytePerSec;
+    bytePerSec = 0;
+    if(displayBytePerSec > (1 << 20)){ // 大于1MB
+        rateLabel->setText(QString::number(displayBytePerSec >> 20) + "MB/s");
+    }
+    else if(displayBytePerSec > (1 << 10)){ // 大于1KB
+        rateLabel->setText(QString::number(displayBytePerSec >> 10) + "KB/s");
+    }
+    else
+        rateLabel->setText(QString::number(displayBytePerSec) + "B/s");
+}
+
+// 构造新的包
+void MainWindow::generatePack(){
+    // 检查校验字
+    if(!checkPackage(lastContent)){ // 校验字错误
+        dropPackageNum++;
+        dropPackageLabel->setText(QString::number(dropPackageNum));
+    }
+    else{ // 校验字正确
+        recPackageNum++;
+        recPackageLabel->setText(QString::number(recPackageNum));
+        /*packPerSec++;
+        bytePerSec += lastContent.size();
+        
+        if(SaveCheckBox->isChecked()) // 若勾选了保存文件选项
+            saveContent(lastContent); // 保存数据
+
+        if(lastContent.startsWith(commandHead)) // 若是命令帧
+            lastPackage = CommandPackage(lastContent);
+        else if(lastContent.startsWith(dataHead)) // 若是数据帧
+            lastPackage = DataPackage(lastContent);
+
+        emit newPackage();*/
+    }
+}
+
+// 更新消息记录
+void MainWindow::refreshMessage(){
+    if(ignoreDataCheckBox->isChecked() && lastPackage.isData()) // 若勾选了忽略数据帧选项
+        return;
+    if(originContentCheckBox->isChecked())
+        MessageBrowser->append("收到：" + lastContent.toHex());
+    else
+        MessageBrowser->append("收到：" + lastPackage.decode());
 }
 
 void MainWindow::sendData(){
@@ -229,41 +268,110 @@ void MainWindow::checkHead(int inputdatalen){ // 检查收到的数据内是否�
     return;
 }
 
-// 检查包的校验码是否正确
-void MainWindow::checkPackage(){
-    packlock.lockForRead(); // 上锁
-    int packlen = packbuf[HEADSIZE] << 8 | packbuf[HEADSIZE + 1]; // 包总长
-    QByteArray pack(packbuf, packlen-1); // 构造包（不带校验字）
-    if(packbuf[packlen - 1] == check(pack)){ // 校验字（1字节）正确
-        MessageBrowser->append("收到包");
-        recPackageNum++;
-        recPackageLabel->setText(QString::number(recPackageNum));
+void MainWindow::setupHeatmap(){
+    QCPColorMap *heatmap = new QCPColorMap(customPlot->xAxis, customPlot->yAxis);  // 构造一个颜色图
+    rowSize = *lastpack[ROWPOS] << 8 | *lastpack[ROWPOS + 1]; // 行宽
+    columnSize = *lastpack[COLUMNPOS] << 8 | *lastpack[COLUMNPOS + 1]; // 列宽
+    deviceType = (*lastpack[DEVICETYPEPOS] == FPGA); // 设备类型
+    heatmap->data()->setSize(rowSize, columnSize);   // 设置颜色图数据维度，其内部维护着一个一维数组（一般表现为二维数组），这里可以理解为有多少个小方块
+    heatmap->data()->setRange(QCPRange(0.5, rowSize - 0.5), QCPRange(0.5, columnSize - 0.5));  // 颜色图在x、y轴上的范围
 
-        pack.append(packbuf[packlen - 1]); // 加上校验字
-        packqueuelock[nextpack]->lockForWrite(); // 上锁
-        if(packqueue[nextpack]) // 若队列中有包，删除
-            delete packqueue[nextpack];
-        packqueue[nextpack] = new Package(pack); // 构造新的包
-        packqueuelock[nextpack]->unlock(); // 解锁
+    // 设置轴的显示，这里使用文字轴
+    QSharedPointer<QCPAxisTickerText> xTicker(new QCPAxisTickerText);
+    QSharedPointer<QCPAxisTickerText> yTicker(new QCPAxisTickerText);
+    xTicker->setSubTickCount(1);
+    yTicker->setSubTickCount(1);
+    customPlot->xAxis->setTicker(xTicker);
+    customPlot->yAxis->setTicker(yTicker);
+    customPlot->xAxis->grid()->setPen(Qt::NoPen);
+    customPlot->yAxis->grid()->setPen(Qt::NoPen);
+    customPlot->xAxis->grid()->setSubGridVisible(true);
+    customPlot->yAxis->grid()->setSubGridVisible(true);
+    customPlot->xAxis->setSubTicks(true);
+    customPlot->yAxis->setSubTicks(true);
+    customPlot->xAxis->setTickLength(0);
+    customPlot->yAxis->setTickLength(0);
+    customPlot->xAxis->setSubTickLength(6);
+    customPlot->yAxis->setSubTickLength(6);
+    customPlot->xAxis->setRange(0, columnSize);
+    customPlot->yAxis->setRange(0, rowSize);
 
-        nextpack = (nextpack + 1) % MAXPACKNUM;
-        emit(drawPack());
-    }
-    else{ // 校验字错误
-        dropPackageNum++;
-        dropPackageLabel->setText(QString::number(dropPackageNum));
-    }
-    packlock.unlock();
-    return;
+    QCPColorScale *colorScale = new QCPColorScale(customPlot);  // 构造一个色条
+    colorScale->setType(QCPAxis::atBottom);   // 水平显示
+    customPlot->plotLayout()->addElement(1, 0, colorScale); // 在颜色图下面显示
+    heatmap->setColorScale(colorScale); 
+    QCPColorGradient gradient;  // 色条使用的颜色渐变
+    gradient.setColorStopAt(0.0, QColor("#f6efa6"));   // 设置色条开始时的颜色
+    gradient.setColorStopAt(1.0, QColor("#bf444c"));  // 设置色条结束时的颜色
+    heatmap->setGradient(gradient);
+//    colorMap->rescaleDataRange();        // 自动计算数据范围，数据范围决定了哪些数据值映射到QCPColorGradient的颜色渐变当中
+    heatmap->setDataRange(QCPRange(0, 10));     // 为了保持与echart的例子一致，我们这里手动设置数据范围
+    heatmap->setInterpolate(false);         // 为了显示小方块，我们禁用插值
+
+    // 保持色条与轴矩形边距一致
+    QCPMarginGroup *marginGroup = new QCPMarginGroup(customPlot);
+    customPlot->axisRect()->setMarginGroup(QCP::msLeft | QCP::msRight, marginGroup);
+    colorScale->setMarginGroup(QCP::msLeft | QCP::msRight, marginGroup);
+
 }
 
-char MainWindow::check(QByteArray message){ // 校验字算法，输入的包不带校验字
-    // 算法内容现在是乱写的简单版checksum
+void MainWindow::refreshHeatmap(){
+    if(!heatmap)
+        setupHeatmap();
+
+    int dataIndex = DATAPOS; // 数据起始位置
+    int num;
+    if(deviceType){
+        // STM32，数据精度12位
+        bool needToRead = true; // 是否需要读取新字节
+        int nextnum; // 提前读取的下一个数字
+        for(int i = 0; i < rowSize; i++){
+            for(int j = 0; j < columnSize; j++){
+                if(needToRead){
+                    num = *lastpack[dataIndex] << 4 | *lastpack[dataIndex + 1] >> 4;
+                    nextnum = (*lastpack[dataIndex + 1] & 0x0f) << 8 | *lastpack[dataIndex + 2];
+                    dataIndex += 3;
+                    if(heatmap->data()->alpha(i, j))
+                        heatmap->data()->setCell(i, j, num);
+                }
+                else{
+                    if(heatmap->data()->alpha(i, j))
+                        heatmap->data()->setCell(i, j, nextnum);
+                }
+                needToRead = !needToRead;
+            }
+        }
+    }
+    else{
+        // FPGA，数据精度24位
+        for(int i = 0; i < rowSize; i++){
+            for(int j = 0; j < columnSize; j++){
+                // 每3个字节拼成一个数据
+                num = *lastpack[dataIndex] << 16 | *lastpack[dataIndex + 1] << 8 | *lastpack[dataIndex + 2];
+                dataIndex += 3;
+                if(heatmap->data()->alpha(i, j))
+                        heatmap->data()->setCell(i, j, num);
+            }
+        }
+    }
+}
+
+char MainWindow::check(QByteArray &message){ // 校验字算法
+    // TODO: 算法现在是乱写的简单版checksum
     char check = 0;
     for(auto i : message){
         check += i;
     }
     return check;
+}
+
+bool MainWindow::checkPackage(QByteArray &message){ // 检查包的校验字是否正确
+    // TODO: 算法现在是乱写的简单版checksum
+    char check = 0;
+    for(int i = 0; i < message.size() - 1; i++){
+        check += message[i];
+    }
+    return check == message[message.size() - 1];
 }
 
 void MainWindow::setRate(){ // 设置传输速率
