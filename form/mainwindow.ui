@@ -51,26 +51,6 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
-           <widget class="QCheckBox" name="originContentCheckBox">
-            <property name="text">
-             <string>显示原数据</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="horizontalSpacer_3">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
            <widget class="QCheckBox" name="ignoreDataCheckBox">
             <property name="text">
              <string>忽略数据帧</string>
@@ -97,6 +77,9 @@
            <widget class="QCheckBox" name="SaveCheckBox">
             <property name="text">
              <string>保存为文件</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -276,48 +259,17 @@
          <layout class="QVBoxLayout" name="heatmapLayout"/>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="DrawConfigLayout">
-          <item>
-           <widget class="QCheckBox" name="DrawCheckBox">
-            <property name="text">
-             <string>开启绘图</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="horizontalSpacer">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="checkBox_4">
-            <property name="text">
-             <string>显示压力</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="horizontalSpacer_6">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-         </layout>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
       </item>
@@ -383,12 +335,6 @@
     <addaction name="menu_6"/>
     <addaction name="menuSD"/>
    </widget>
-   <widget class="QMenu" name="menu_3">
-    <property name="title">
-     <string>绘图</string>
-    </property>
-    <addaction name="action_27"/>
-   </widget>
    <widget class="QMenu" name="menu_4">
     <property name="title">
      <string>工具</string>
@@ -410,7 +356,6 @@
    <addaction name="menu"/>
    <addaction name="menu_2"/>
    <addaction name="menu_4"/>
-   <addaction name="menu_3"/>
   </widget>
   <action name="connectSerialAct">
    <property name="checkable">

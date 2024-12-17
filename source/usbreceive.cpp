@@ -4,61 +4,34 @@
 USBReceive::USBReceive(CCyUSBDevice *USBDevice) : USBDevice(USBDevice){
     stopped = false;
     USBRecvPos = 0;
+    usbLastpack = nullptr;
 }
 
 USBReceive::USBReceive(CCyUSBDevice *USBDevice, QTextBrowser *MessageBrowser, QLabel *recPackageLabel, QLabel *dropPackageLabel) : USBDevice(USBDevice), MessageBrowser(MessageBrowser), recPackageLabel(recPackageLabel), dropPackageLabel(dropPackageLabel){
     stopped = false;
     USBRecvPos = 0;
+    usbLastpack = nullptr;
 }
 
 void USBReceive::run(){
     LONG length;
     while(!stopped){
-        length = RECVBUFSIZE;
+        length = USBRECVBUFSIZE;
         static QByteArray data;
-        /*
-        // TODO: USB还没加读写锁
-        if(USBDevice->BulkInEndPt->XferData((unsigned char *)USBRecvBuf + USBRecvPos, length)){
-            if(recvlock.tryLockForWrite()){
-                memcpy(recvbuf + RECVSIZE, USBRecvBuf, length);
-                USBRecvPos = 0;
-                recvlock.unlock();
-                emit dataReceived(length);
-            }
-            else{
-                USBRecvPos += length;
-            }
-        }
-        else if(USBRecvPos > 0){
-            if(recvlock.tryLockForWrite()){
-                memcpy(recvbuf + RECVSIZE, USBRecvBuf, USBRecvPos);
-                USBRecvPos = 0;
-                recvlock.unlock();
-                emit dataReceived(length);
-            }
-        }
-        */
         if(USBDevice->BulkInEndPt->XferData((unsigned char *)USBRecvBuf, length)){
             data.append(USBRecvBuf, length);
-            qDebug() << data;
             int index = -1, remainsize = min(data.size(), 4); // remainsize代表data最后的一段要保留的数据的长度，一定要确保小于data.size()
             while((index = data.indexOf(dataHead, index + 1)) != -1){ // 处理数据帧
                 if(index + 6 >= data.size()){
                     remainsize = data.size() - index;
                     continue;
                 }
-                int lenth = data[index + 4] << 16 | data[index + 5] << 8 | data[index + 6];
+                int lenth = (data[index + 4] & 0xff) << 16 | (data[index + 5] & 0xff) << 8 | (data[index + 6] & 0xff);
                 if(data.size() - index >= lenth){ // 包收完了
-                    QByteArray newpack(data + index, lenth - 1);
-                    // MessageBrowser->append("USB收到数据帧");
-                    if(check(newpack) == data[index + lenth - 1]){ // 校验字正确
-                        recPackageNum++;
-                        recPackageLabel->setText(QString::number(recPackageNum));
-                    }
-                    else{ // 校验字错误
-                        dropPackageNum++;
-                        dropPackageLabel->setText(QString::number(dropPackageNum));
-                    }
+                    //if(usbLastpack)
+                    //    delete usbLastpack;
+                    usbLastpack = new QByteArray(data + index, lenth);
+                    emit usbReadReady();
                 }
                 else{ // 包没收完
                     remainsize = data.size() - index;

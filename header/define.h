@@ -12,15 +12,15 @@
 #define RECVBUFSIZE 4096 // 接收数据缓冲区大小
 #define MAXPACKSIZE 1024 // 包缓冲区大小
 #define MAXPACKNUM 20 // 暂存的包的数量
-#define USBRECVBUFSIZE 4096 // USB接收数据缓冲区大小
+#define USBRECVBUFSIZE 1024 // USB接收数据缓冲区大小
 #define HEADSIZE 4 // 包头长度
 #define PACKLENSIZE 2 // 包长长度
 #define RECVSIZE (HEADSIZE+PACKLENSIZE-1) // 接收buffer每次最后会留下一段数据移到最前面
 
 // TODO：包头
-#define COMMANDHEAD 0x24, 0x68, 0xAC, 0xE0
+#define COMMANDHEAD 0x13, 0x57, 0x9A, 0xCE
 #define DATAHEAD    0x13, 0x57, 0x9A, 0xCE
-#define RETURNHEAD  0x13, 0x57, 0x9A, 0xCE
+#define RETURNHEAD  0x24, 0x68, 0xAC, 0xE0
 
 // 数据帧相关数据
 #define ROWPOS 7

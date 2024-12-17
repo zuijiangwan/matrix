@@ -56,13 +56,6 @@ private:
     int packPerSec; // 每秒包数
     long long bytePerSec; // 每秒字节数
 
-    // 绘图相关
-    QCustomPlot *customPlot; // 绘图框
-    QCPColorMap *heatmap; // 热力图
-    QByteArray *lastpack;
-    int rowSize, columnSize; // 矩阵规模
-    bool deviceType; // 设备类型
-
     // 模块和线程
     // SaveFileThread *saveFileThread;
 
@@ -87,6 +80,13 @@ private:
 
     QByteArray lastContent; // 最新的原始包数据
     Package lastPackage; // 最新的包
+
+    // 绘图相关
+    QCustomPlot *customPlot; // 绘图框
+    QCPColorMap *heatmap; // 热力图
+    QByteArray *lastpack;
+    int rowSize, columnSize; // 矩阵规模
+    bool deviceType; // 设备类型
 
     // 工具函数
     void sendCommand(int commandCode, QByteArray info = ""); // 将命令填入发送框内，参数为指令码和额外信息，额外信息默认为空

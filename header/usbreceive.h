@@ -43,8 +43,10 @@ public:
     USBReceive(CCyUSBDevice *USBDevice, QTextBrowser *MessageBrowser, QLabel *recPackageLabel, QLabel *dropPackageLabel); // 构造函数2
     QByteArray readAll(); // 读取所有数据
 
+    QByteArray *usbLastpack;
+
 signals:
-    void readReady(); // 有数据可读的信号
+    void usbReadReady(); // 有数据可读的信号
 };
 
 #endif // USBRECEIVE_H

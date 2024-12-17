@@ -10,17 +10,12 @@
 #include <QTime>
 
 MainWindow::MainWindow() : QMainWindow(){
-    // 绘图
-    //customPlot = new QCustomPlot();
-    //heatmapLayout->addWidget(customPlot);
-    //heatmap = nullptr;
-
     setupUi(this);
 
-    // 初始化包队列的写锁
-    for(int i = 0; i < MAXPACKNUM; i++){
-        packqueuelock[i] = new QReadWriteLock();
-    }
+    // 绘图
+    customPlot = new QCustomPlot(this);
+    setupHeatmap();
+    heatmapLayout->addWidget(customPlot);
 
     // 初始化和显示各种包的统计值
     recPackageLabel->setText(QString::number(recPackageNum));
@@ -53,7 +48,7 @@ MainWindow::MainWindow() : QMainWindow(){
     USBDevice->Close(); // 需要先关闭，否则状态会有误
     usbReceive = new class USBReceive(USBDevice, MessageBrowser, recPackageLabel, dropPackageLabel); // 创建USB接收线程
     connect(connectUSBAct, SIGNAL(triggered()), this, SLOT(connectUSB()));
-    connect(usbReceive, SIGNAL(readReady()), this, SLOT(USBReceive()));
+    connect(usbReceive, SIGNAL(usbReadReady()), this, SLOT(USBReceive()));
 
     // 保存文件
     connect(savePositonAct, SIGNAL(triggered()), this, SLOT(setFilePath()));
@@ -91,7 +86,12 @@ MainWindow::MainWindow() : QMainWindow(){
     fpstimer->start(1000); // TODO：计算丢包率和fps的更新时间间隔，可修改，单位为ms
 
     // 绘图计时器，更新热力图用
+    lastpack = nullptr;
+    QTimer *drawtimer = new QTimer(this);
+    connect(drawtimer, SIGNAL(timeout()), this, SLOT(refreshHeatmap()));
+    //drawtimer->start(1000); // TODO：更新热力图的时间间隔，可修改，单位为ms
 
+    file = nullptr;
     setFilePath(); // 设置文件路径
 }
 
@@ -147,12 +147,10 @@ void MainWindow::generatePack(){
 void MainWindow::refreshMessage(){
     if(ignoreDataCheckBox->isChecked() && lastPackage.isData()) // 若勾选了忽略数据帧选项
         return;
-    if(originContentCheckBox->isChecked())
-        MessageBrowser->append("收到：" + lastContent.toHex());
-    else
-        MessageBrowser->append("收到：" + lastPackage.decode());
+    MessageBrowser->append("收到：" + lastPackage.decode());
 }
 
+// 发送数据
 void MainWindow::sendData(){
     if(MessageEdit->toPlainText().isEmpty()){ // 检查发送内容是否为空
         QMessageBox::warning(this, tr("warning"), tr("发送内容为空！"));
@@ -179,7 +177,8 @@ void MainWindow::sendData(){
     return;
 }
 
-void MainWindow::sendCommand(int commandCode, QByteArray info){ // 把相应命令帧填入发送框
+// 把相应命令帧填入发送框
+void MainWindow::sendCommand(int commandCode, QByteArray info){
     QByteArray data; // 待发送命令
     // 包头
     for(int i = 0; i < HEADSIZE; i++){
@@ -207,7 +206,8 @@ void MainWindow::sendCommand(int commandCode, QByteArray info){ // 把相应命�
     return;
 }
 
-void MainWindow::checkHead(int inputdatalen){ // 检查收到的数据内是否出现包头
+// 检查收到的数据内是否出现包头
+void MainWindow::checkHead(int inputdatalen){
     recvlock.lockForWrite(); // 上锁，退出函数前记得解锁
 
     static int datawait = 0; // 待接收数据长度
@@ -268,44 +268,25 @@ void MainWindow::checkHead(int inputdatalen){ // 检查收到的数据内是否�
     return;
 }
 
+// 初始化热力图
 void MainWindow::setupHeatmap(){
-    QCPColorMap *heatmap = new QCPColorMap(customPlot->xAxis, customPlot->yAxis);  // 构造一个颜色图
-    rowSize = *lastpack[ROWPOS] << 8 | *lastpack[ROWPOS + 1]; // 行宽
-    columnSize = *lastpack[COLUMNPOS] << 8 | *lastpack[COLUMNPOS + 1]; // 列宽
-    deviceType = (*lastpack[DEVICETYPEPOS] == FPGA); // 设备类型
+    rowSize = 120; // 默认行宽为120
+    columnSize = 240; // 默认列宽为240
+    customPlot = new QCustomPlot(this);
+    heatmap = new QCPColorMap(customPlot->xAxis, customPlot->yAxis);  // 构造一个颜色图
+    deviceType = false; // 设备类型，默认FPGA
     heatmap->data()->setSize(rowSize, columnSize);   // 设置颜色图数据维度，其内部维护着一个一维数组（一般表现为二维数组），这里可以理解为有多少个小方块
-    heatmap->data()->setRange(QCPRange(0.5, rowSize - 0.5), QCPRange(0.5, columnSize - 0.5));  // 颜色图在x、y轴上的范围
-
-    // 设置轴的显示，这里使用文字轴
-    QSharedPointer<QCPAxisTickerText> xTicker(new QCPAxisTickerText);
-    QSharedPointer<QCPAxisTickerText> yTicker(new QCPAxisTickerText);
-    xTicker->setSubTickCount(1);
-    yTicker->setSubTickCount(1);
-    customPlot->xAxis->setTicker(xTicker);
-    customPlot->yAxis->setTicker(yTicker);
-    customPlot->xAxis->grid()->setPen(Qt::NoPen);
-    customPlot->yAxis->grid()->setPen(Qt::NoPen);
-    customPlot->xAxis->grid()->setSubGridVisible(true);
-    customPlot->yAxis->grid()->setSubGridVisible(true);
-    customPlot->xAxis->setSubTicks(true);
-    customPlot->yAxis->setSubTicks(true);
-    customPlot->xAxis->setTickLength(0);
-    customPlot->yAxis->setTickLength(0);
-    customPlot->xAxis->setSubTickLength(6);
-    customPlot->yAxis->setSubTickLength(6);
-    customPlot->xAxis->setRange(0, columnSize);
-    customPlot->yAxis->setRange(0, rowSize);
+    heatmap->data()->setRange(QCPRange(0, rowSize), QCPRange(0, columnSize));  // 颜色图在x、y轴上的范围
 
     QCPColorScale *colorScale = new QCPColorScale(customPlot);  // 构造一个色条
     colorScale->setType(QCPAxis::atBottom);   // 水平显示
     customPlot->plotLayout()->addElement(1, 0, colorScale); // 在颜色图下面显示
-    heatmap->setColorScale(colorScale); 
+    heatmap->setColorScale(colorScale);
     QCPColorGradient gradient;  // 色条使用的颜色渐变
     gradient.setColorStopAt(0.0, QColor("#f6efa6"));   // 设置色条开始时的颜色
     gradient.setColorStopAt(1.0, QColor("#bf444c"));  // 设置色条结束时的颜色
     heatmap->setGradient(gradient);
-//    colorMap->rescaleDataRange();        // 自动计算数据范围，数据范围决定了哪些数据值映射到QCPColorGradient的颜色渐变当中
-    heatmap->setDataRange(QCPRange(0, 10));     // 为了保持与echart的例子一致，我们这里手动设置数据范围
+    heatmap->setDataRange(QCPRange(0, (1<<24)-1));     // 为了保持与echart的例子一致，我们这里手动设置数据范围
     heatmap->setInterpolate(false);         // 为了显示小方块，我们禁用插值
 
     // 保持色条与轴矩形边距一致
@@ -313,11 +294,23 @@ void MainWindow::setupHeatmap(){
     customPlot->axisRect()->setMarginGroup(QCP::msLeft | QCP::msRight, marginGroup);
     colorScale->setMarginGroup(QCP::msLeft | QCP::msRight, marginGroup);
 
+    // 初始化数值
+    for(int i = 0; i < rowSize; i++) // 初始化数据
+        for(int j = 0; j < columnSize; j++)
+            heatmap->data()->setCell(i, j, 0);
+
+    customPlot->rescaleAxes();
+    customPlot->replot();
 }
 
+// 更新热力图
 void MainWindow::refreshHeatmap(){
-    if(!heatmap)
-        setupHeatmap();
+    if(!lastpack) // 若没有收到数据
+        return;
+    // 设置热力图大小
+    rowSize = (*lastpack[ROWPOS] & 0xff) << 8 | (*lastpack[ROWPOS + 1] & 0xff); // 行数
+    columnSize = (*lastpack[COLUMNPOS] & 0xff) << 8 | (*lastpack[COLUMNPOS + 1] & 0xff); // 列数
+    heatmap->data()->setSize(rowSize, columnSize);
 
     int dataIndex = DATAPOS; // 数据起始位置
     int num;
@@ -328,8 +321,8 @@ void MainWindow::refreshHeatmap(){
         for(int i = 0; i < rowSize; i++){
             for(int j = 0; j < columnSize; j++){
                 if(needToRead){
-                    num = *lastpack[dataIndex] << 4 | *lastpack[dataIndex + 1] >> 4;
-                    nextnum = (*lastpack[dataIndex + 1] & 0x0f) << 8 | *lastpack[dataIndex + 2];
+                    num = (*lastpack[dataIndex] & 0xff) << 4 | (*lastpack[dataIndex + 1] & 0xff) >> 4;
+                    nextnum = (*lastpack[dataIndex + 1] & 0xff) << 8 | (*lastpack[dataIndex + 2] & 0xff);
                     dataIndex += 3;
                     if(heatmap->data()->alpha(i, j))
                         heatmap->data()->setCell(i, j, num);
@@ -347,7 +340,7 @@ void MainWindow::refreshHeatmap(){
         for(int i = 0; i < rowSize; i++){
             for(int j = 0; j < columnSize; j++){
                 // 每3个字节拼成一个数据
-                num = *lastpack[dataIndex] << 16 | *lastpack[dataIndex + 1] << 8 | *lastpack[dataIndex + 2];
+                num = (*lastpack[dataIndex] & 0xff) << 16 | (*lastpack[dataIndex + 1] & 0xff) << 8 | (*lastpack[dataIndex + 2] & 0xff);
                 dataIndex += 3;
                 if(heatmap->data()->alpha(i, j))
                         heatmap->data()->setCell(i, j, num);
